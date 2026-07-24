@@ -1099,59 +1099,73 @@ source ~/.bashrc</code></pre>
         <h1>Module 5: Cloud EKS, EMR Virtual Cluster & IAM Roles</h1>
         <p class="subtitle">Provisioning Amazon EKS, binding EMR virtual clusters, and configuring IAM execution roles.</p>
 
-        <h2>5.1 Amazon EKS Cluster Creation</h2>
+        <h2>5.1 AWS CLI Authentication (`aws configure`)</h2>
+        <p>Before executing <code>eksctl</code> commands to create your EKS cluster, configure your local terminal with AWS CLI credentials:</p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>eksctl create cluster --name spark-eks-cluster --region us-west-2 --nodegroup-name standard-workers --node-type t3.medium --nodes 1</code></pre>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span></code></pre>
+        </div>
+        <p>You will be prompted for your AWS IAM credentials:</p>
+        <ul class="bullet-list" style="margin-bottom: 1.25rem;">
+          <li><b>AWS Access Key ID</b>: <code>AKIAXXXXXXXXXXXXXXXX</code> (Your IAM Access Key ID)</li>
+          <li><b>AWS Secret Access Key</b>: <code>xxxxxxxxxxxxxxxxxxxxLEKEY</code></li>
+          <li><b>Default region name</b>: <code>us-west-2</code> (or your target AWS region)</li>
+          <li><b>Default output format</b>: <code>json</code></li>
+        </ul>
+
+        <h2>5.2 Amazon EKS Cluster Creation</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">eksctl</span> <span class="token-function">create-cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --nodegroup-name <span class="token-string">standard-workers</span> --node-type <span class="token-string">t3.medium</span> --nodes <span class="token-number">1</span></code></pre>
         </div>
         <p><b>Verification Command:</b></p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>kubectl get nodes
-eksctl get cluster --name spark-eks-cluster --region us-west-2</code></pre>
+          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span>
+<span class="token-keyword">eksctl</span> <span class="token-function">get</span> <span class="token-variable">cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span></code></pre>
         </div>
 
-        <h2>5.2 EKS Virtual Cluster (EMR on EKS)</h2>
+        <h2>5.3 EKS Virtual Cluster (EMR on EKS)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code># Create k8s namespace for spark workloads
-kubectl create namespace spark
+          <pre class="code-content"><code><span class="token-comment"># Create k8s namespace for spark workloads</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> spark
 
-# Enable OIDC provider for IRSA
-eksctl utils associate-iam-oidc-provider --cluster spark-eks-cluster --region us-west-2 --approve
+<span class="token-comment"># Enable OIDC provider for IRSA</span>
+<span class="token-keyword">eksctl</span> <span class="token-variable">utils</span> <span class="token-function">associate-iam-oidc-provider</span> --cluster <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --approve
 
-# Create EMR Virtual Cluster
-aws emr-containers create-virtual-cluster --name spark-emr-virtual-cluster --container-provider '{"id": "spark-eks-cluster", "type": "EKS", "info": {"eksInfo": {"namespace": "spark"}}}'</code></pre>
+<span class="token-comment"># Create EMR Virtual Cluster</span>
+<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">create-virtual-cluster</span> --name <span class="token-string">spark-emr-virtual-cluster</span> --container-provider <span class="token-string">'{"id": "spark-eks-cluster", "type": "EKS", "info": {"eksInfo": {"namespace": "spark"}}}'</span></code></pre>
         </div>
         <p><b>Verification Command:</b></p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>aws emr-containers list-virtual-clusters</code></pre>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">list-virtual-clusters</span></code></pre>
         </div>
 
-        <h2>5.3 IAM Execution Roles Setup</h2>
+        <h2>5.4 IAM Execution Roles Setup</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>cat <<EOF > trust-policy.json
+          <pre class="code-content"><code><span class="token-keyword">cat</span> &lt;&lt;<span class="token-keyword">EOF</span> &gt; <span class="token-string">trust-policy.json</span>
 {
-  "Version": "2012-10-17",
-  "Statement": [
+  <span class="token-variable">"Version"</span>: <span class="token-string">"2012-10-17"</span>,
+  <span class="token-variable">"Statement"</span>: [
     {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "emr-containers.amazonaws.com"
+      <span class="token-variable">"Effect"</span>: <span class="token-string">"Allow"</span>,
+      <span class="token-variable">"Principal"</span>: {
+        <span class="token-variable">"Service"</span>: <span class="token-string">"emr-containers.amazonaws.com"</span>
       },
-      "Action": "sts:AssumeRole"
+      <span class="token-variable">"Action"</span>: <span class="token-string">"sts:AssumeRole"</span>
     }
   ]
 }
-EOF
+<span class="token-keyword">EOF</span>
 
-aws iam create-role --role-name EMRContainersJobExecutionRole --assume-role-policy-document file://trust-policy.json
-aws iam attach-role-policy --role-name EMRContainersJobExecutionRole --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess</code></pre>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">create-role</span> --role-name <span class="token-string">EMRContainersJobExecutionRole</span> --assume-role-policy-document <span class="token-string">file://trust-policy.json</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">attach-role-policy</span> --role-name <span class="token-string">EMRContainersJobExecutionRole</span> --policy-arn <span class="token-string">arn:aws:iam::aws:policy/AmazonS3FullAccess</span></code></pre>
         </div>
 
-        <h2>5.4 Retrieve Virtual Cluster ID & Execution Role ARN</h2>
+        <h2>5.5 Retrieve Virtual Cluster ID & Execution Role ARN</h2>
         <p>Before submitting a job, fetch your active EMR Virtual Cluster ID and IAM Execution Role ARN from AWS CLI:</p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
@@ -1162,16 +1176,16 @@ aws iam attach-role-policy --role-name EMRContainersJobExecutionRole --policy-ar
 <span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">list-roles</span> --query <span class="token-string">"Roles[?contains(RoleName, 'EMRContainersJobExecutionRole')].Arn"</span> --output <span class="token-string">text</span></code></pre>
         </div>
 
-        <h2>5.5 Test `spark-submit` on EMR on EKS</h2>
-        <p>Run a test job using the built-in SparkPi example JAR pre-packaged inside the EMR container image (no S3 file upload required). Substitute your <code>&lt;VIRTUAL_CLUSTER_ID&gt;</code> and <code>&lt;EXECUTION_ROLE_ARN&gt;</code> retrieved in Step 5.4 into the command below:</p>
+        <h2>5.6 Test `spark-submit` on EMR on EKS</h2>
+        <p>Run a test job using the built-in SparkPi example JAR pre-packaged inside the EMR container image (no S3 file upload required). Substitute your <code>&lt;VIRTUAL_CLUSTER_ID&gt;</code> and <code>&lt;EXECUTION_ROLE_ARN&gt;</code> retrieved in Step 5.5 into the command below:</p>
 
         <div class="callout callout-amber">
           <div class="callout-title">⚠️ Required Parameter Substitutions in start-job-run</div>
           <div class="callout-content">
             <p>Replace the highlighted placeholder parameters in the <code>start-job-run</code> command before executing:</p>
             <ul class="bullet-list" style="margin-top: 0.5rem; margin-bottom: 0;">
-              <li><code>&lt;VIRTUAL_CLUSTER_ID&gt;</code>: The Virtual Cluster ID output from <code>aws emr-containers list-virtual-clusters</code> in Step 5.4.</li>
-              <li><code>&lt;EXECUTION_ROLE_ARN&gt;</code>: The full IAM Role ARN (e.g. <code>arn:aws:iam::123456789012:role/EMRContainersJobExecutionRole</code>) output from Step 5.4.</li>
+              <li><code>&lt;VIRTUAL_CLUSTER_ID&gt;</code>: The Virtual Cluster ID output from <code>aws emr-containers list-virtual-clusters</code> in Step 5.5.</li>
+              <li><code>&lt;EXECUTION_ROLE_ARN&gt;</code>: The full IAM Role ARN (e.g. <code>arn:aws:iam::123456789012:role/EMRContainersJobExecutionRole</code>) output from Step 5.5.</li>
             </ul>
           </div>
         </div>
