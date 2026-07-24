@@ -360,6 +360,44 @@
       display: block;
     }
 
+    .auth-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .auth-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .auth-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .auth-content {
+      display: none;
+    }
+
+    .auth-content.active {
+      display: block;
+    }
+
     /* --- CODE BLOCK CONTAINER --- */
     .code-block-container {
       background-color: var(--code-bg);
@@ -1099,19 +1137,60 @@ source ~/.bashrc</code></pre>
         <h1>Module 5: Cloud EKS, EMR Virtual Cluster & IAM Roles</h1>
         <p class="subtitle">Provisioning Amazon EKS, binding EMR virtual clusters, and configuring IAM execution roles.</p>
 
-        <h2>5.1 AWS CLI Authentication (`aws configure`)</h2>
-        <p>Before executing <code>eksctl</code> commands to create your EKS cluster, configure your local terminal with AWS CLI credentials:</p>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span></code></pre>
+        <h2>5.1 AWS CLI Authentication (Standard Credentials vs AWS SSO)</h2>
+        <p>Before executing <code>eksctl</code> commands to create your EKS cluster, authenticate your local terminal using either <b>Standard IAM Access Keys</b> or <b>AWS IAM Identity Center (AWS SSO)</b>:</p>
+
+        <!-- Auth Mode Switcher -->
+        <div class="auth-tab-bar">
+          <button class="auth-tab-btn active" data-auth="standard" onclick="switchAuthMode('standard')">🔑 Standard IAM Credentials</button>
+          <button class="auth-tab-btn" data-auth="sso" onclick="switchAuthMode('sso')">🔐 AWS SSO (Identity Center)</button>
         </div>
-        <p>You will be prompted for your AWS IAM credentials:</p>
-        <ul class="bullet-list" style="margin-bottom: 1.25rem;">
-          <li><b>AWS Access Key ID</b>: <code>AKIAXXXXXXXXXXXXXXXX</code> (Your IAM Access Key ID)</li>
-          <li><b>AWS Secret Access Key</b>: <code>xxxxxxxxxxxxxxxxxxxxLEKEY</code></li>
-          <li><b>Default region name</b>: <code>us-west-2</code> (or your target AWS region)</li>
-          <li><b>Default output format</b>: <code>json</code></li>
-        </ul>
+
+        <!-- Standard IAM Credentials Content -->
+        <div class="auth-content active" data-auth="standard">
+          <p>Run standard interactive configuration:</p>
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span></code></pre>
+          </div>
+          <p>You will be prompted for your AWS IAM credentials:</p>
+          <ul class="bullet-list" style="margin-bottom: 1.25rem;">
+            <li><b>AWS Access Key ID</b>: <code>AKIAXXXXXXXXXXXXXXXX</code> (Your IAM Access Key ID)</li>
+            <li><b>AWS Secret Access Key</b>: <code>xxxxxxxxxxxxxxxxxxxxLEKEY</code></li>
+            <li><b>Default region name</b>: <code>us-west-2</code> (or your target AWS region)</li>
+            <li><b>Default output format</b>: <code>json</code></li>
+          </ul>
+          <p><b>Verification Command:</b></p>
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span></code></pre>
+          </div>
+        </div>
+
+        <!-- AWS SSO Credentials Content -->
+        <div class="auth-content" data-auth="sso">
+          <p>Configure and authenticate an AWS SSO session using profile <code>student</code>:</p>
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Interactively configure AWS SSO profile 'student'</span>
+<span class="token-keyword">aws</span> <span class="token-function">configure sso</span> --profile <span class="token-string">student</span>
+
+<span class="token-comment"># 2. Authenticate session via browser login</span>
+<span class="token-keyword">aws</span> <span class="token-variable">sso</span> <span class="token-function">login</span> --profile <span class="token-string">student</span>
+
+<span class="token-comment"># 3. Export AWS_PROFILE for active terminal session</span>
+<span class="token-comment"># PowerShell (Windows):</span>
+<span class="token-variable">$env:AWS_PROFILE</span> = <span class="token-string">"student"</span>
+
+<span class="token-comment"># Bash / macOS / Linux:</span>
+<span class="token-keyword">export</span> <span class="token-variable">AWS_PROFILE</span>=<span class="token-string">student</span></code></pre>
+          </div>
+          <p><b>Verification Command:</b></p>
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span> --profile <span class="token-string">student</span></code></pre>
+          </div>
+        </div>
 
         <h2>5.2 Amazon EKS Cluster Creation</h2>
         <div class="code-block-container">
@@ -1359,6 +1438,27 @@ kubectl get nodes</code></pre>
       const contents = document.querySelectorAll('.os-content');
       contents.forEach(content => {
         if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 3.1 Auth Mode Switcher: switchAuthMode(mode)
+    function switchAuthMode(mode) {
+      const tabBtns = document.querySelectorAll('.auth-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-auth') === mode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.auth-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-auth') === mode) {
           content.classList.add('active');
         } else {
           content.classList.remove('active');
