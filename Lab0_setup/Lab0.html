@@ -1138,7 +1138,9 @@ aws emr-containers create-virtual-cluster --name spark-emr-virtual-cluster --con
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": { "Service": "emr-containers.amazonaws.com" },
+      "Principal": {
+        "Service": "emr-containers.amazonaws.com"
+      },
       "Action": "sts:AssumeRole"
     }
   ]
@@ -1149,20 +1151,49 @@ aws iam create-role --role-name EMRContainersJobExecutionRole --assume-role-poli
 aws iam attach-role-policy --role-name EMRContainersJobExecutionRole --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess</code></pre>
         </div>
 
-        <h2>5.4 Test `spark-submit` on EMR on EKS</h2>
+        <h2>5.4 Retrieve Virtual Cluster ID & Execution Role ARN</h2>
+        <p>Before submitting a job, fetch your active EMR Virtual Cluster ID and IAM Execution Role ARN from AWS CLI:</p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>aws emr-containers start-job-run \
-  --virtual-cluster-id <VIRTUAL_CLUSTER_ID> \
-  --name pi-test-job \
-  --execution-role-arn arn:aws:iam::<ACCOUNT_ID>:role/EMRContainersJobExecutionRole \
-  --release-label emr-6.10.0-latest \
-  --job-driver '{"sparkSubmitJobDriver": {"entryPoint": "s3://<YOUR_BUCKET>/jobs/pi.py"}}'</code></pre>
+          <pre class="code-content"><code><span class="token-comment"># 1. Retrieve active EMR Virtual Cluster ID</span>
+<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">list-virtual-clusters</span> --query <span class="token-string">"virtualClusters[?state=='RUNNING'].id"</span> --output <span class="token-string">text</span>
+
+<span class="token-comment"># 2. Retrieve IAM Execution Role ARN</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">list-roles</span> --query <span class="token-string">"Roles[?contains(RoleName, 'EMRContainersJobExecutionRole')].Arn"</span> --output <span class="token-string">text</span></code></pre>
+        </div>
+
+        <h2>5.5 Test `spark-submit` on EMR on EKS</h2>
+        <p>Run a test job using the built-in SparkPi example JAR pre-packaged inside the EMR container image (no S3 file upload required). Substitute your <code>&lt;VIRTUAL_CLUSTER_ID&gt;</code> and <code>&lt;EXECUTION_ROLE_ARN&gt;</code> retrieved in Step 5.4 into the command below:</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Required Parameter Substitutions in start-job-run</div>
+          <div class="callout-content">
+            <p>Replace the highlighted placeholder parameters in the <code>start-job-run</code> command before executing:</p>
+            <ul class="bullet-list" style="margin-top: 0.5rem; margin-bottom: 0;">
+              <li><code>&lt;VIRTUAL_CLUSTER_ID&gt;</code>: The Virtual Cluster ID output from <code>aws emr-containers list-virtual-clusters</code> in Step 5.4.</li>
+              <li><code>&lt;EXECUTION_ROLE_ARN&gt;</code>: The full IAM Role ARN (e.g. <code>arn:aws:iam::123456789012:role/EMRContainersJobExecutionRole</code>) output from Step 5.4.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">start-job-run</span> \
+  --virtual-cluster-id <span class="token-type">&lt;VIRTUAL_CLUSTER_ID&gt;</span> \
+  --name <span class="token-string">spark-pi-example</span> \
+  --execution-role-arn <span class="token-type">&lt;EXECUTION_ROLE_ARN&gt;</span> \
+  --release-label <span class="token-string">emr-6.10.0-latest</span> \
+  --job-driver <span class="token-string">'{
+    "sparkSubmitJobDriver": {
+      "entryPoint": "local:///usr/lib/spark/examples/jars/spark-examples.jar",
+      "sparkSubmitParameters": "--class org.apache.spark.examples.SparkPi"
+    }
+  }'</span></code></pre>
         </div>
         <p><b>Verification Command:</b></p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>aws emr-containers describe-job-run --virtual-cluster-id <VIRTUAL_CLUSTER_ID> --id <JOB_RUN_ID></code></pre>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">describe-job-run</span> --virtual-cluster-id <span class="token-type">&lt;VIRTUAL_CLUSTER_ID&gt;</span> --id <span class="token-type">&lt;JOB_RUN_ID&gt;</span></code></pre>
         </div>
 
         <ul class="task-checklist">
