@@ -939,7 +939,7 @@ docker info</code></pre>
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code>brew tap eksctl-io/tap && brew install eksctl-io/tap/eksctl</code></pre>
+            <pre class="code-content"><code>brew install eksctl</code></pre>
           </div>
         </div>
         <div class="os-content" data-os="linux">
@@ -1102,13 +1102,13 @@ source ~/.bashrc</code></pre>
         <h2>5.1 Amazon EKS Cluster Creation</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code>eksctl create cluster --name spark-eks-cluster --region us-east-1 --nodegroup-name standard-workers --node-type t3.medium --nodes 2</code></pre>
+          <pre class="code-content"><code>eksctl create cluster --name spark-eks-cluster --region us-west-2 --nodegroup-name standard-workers --node-type t3.medium --nodes 1</code></pre>
         </div>
         <p><b>Verification Command:</b></p>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code>kubectl get nodes
-eksctl get cluster --name spark-eks-cluster --region us-east-1</code></pre>
+eksctl get cluster --name spark-eks-cluster --region us-west-2</code></pre>
         </div>
 
         <h2>5.2 EKS Virtual Cluster (EMR on EKS)</h2>
@@ -1118,7 +1118,7 @@ eksctl get cluster --name spark-eks-cluster --region us-east-1</code></pre>
 kubectl create namespace spark
 
 # Enable OIDC provider for IRSA
-eksctl utils associate-iam-oidc-provider --cluster spark-eks-cluster --region us-east-1 --approve
+eksctl utils associate-iam-oidc-provider --cluster spark-eks-cluster --region us-west-2 --approve
 
 # Create EMR Virtual Cluster
 aws emr-containers create-virtual-cluster --name spark-emr-virtual-cluster --container-provider '{"id": "spark-eks-cluster", "type": "EKS", "info": {"eksInfo": {"namespace": "spark"}}}'</code></pre>
