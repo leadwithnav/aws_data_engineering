@@ -1,0 +1,29 @@
+FROM apache/spark:3.5.1
+
+USER root
+
+# Install Jupyter Notebook
+RUN pip install --no-cache-dir jupyter
+
+# Copy application files, notebooks and sample datasets
+COPY spark_execution_fundamentals.ipynb /opt/spark/work-dir/spark_execution_fundamentals.ipynb
+COPY sample_orders.csv /opt/spark/work-dir/sample_orders.csv
+COPY sample_customers.csv /opt/spark/work-dir/sample_customers.csv
+
+# Ensure correct permissions for the default Spark user (uid 185)
+RUN chown -R 185:185 /opt/spark/work-dir
+
+# Expose Jupyter (8888) and Spark UI (4040) ports
+EXPOSE 8888 4040
+
+# Set HOME environment variable to a writeable directory (/tmp) for jupyter configurations
+ENV HOME=/tmp
+
+# Configure Spark environment paths for Python
+ENV SPARK_HOME=/opt/spark
+ENV PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.7-src.zip
+
+USER 185
+
+# Start Jupyter Notebook server in work-dir, allowing tokenless access for easy local use
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''", "--NotebookApp.password=''"]

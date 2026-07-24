@@ -1,0 +1,11 @@
+OrderID,CustomerID,Category,Amount
+1,C01,Electronics,299.99
+2,C02,Books,12.50
+3,C03,Electronics,79.99
+4,C01,Home,120.00
+5,C04,Books,45.00
+6,C02,Electronics,899.00
+7,C03,Home,15.50
+8,C05,Books,8.99
+9,C01,Electronics,149.99
+10,C04,Home,65.00

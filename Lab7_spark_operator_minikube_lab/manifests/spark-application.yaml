@@ -1,0 +1,33 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: spark-operator-demo
+  namespace: default
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "spark-on-eks:latest"
+  # Pull policy IfNotPresent allows the cluster to use the locally loaded docker image
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "local:///opt/spark/work-dir/spark_app.py"
+  # Arguments passed to the Python app script (pointing to the embedded CSV file)
+  arguments:
+    - "local:///opt/spark/work-dir/sample_data.csv"
+  sparkVersion: "3.5.1"
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "512m"
+    labels:
+      version: 3.5.1
+    # The service account spark must exist in default namespace and have pod lifecycle permissions
+    serviceAccount: spark
+  executor:
+    cores: 1
+    instances: 1
+    memory: "512m"
+    labels:
+      version: 3.5.1

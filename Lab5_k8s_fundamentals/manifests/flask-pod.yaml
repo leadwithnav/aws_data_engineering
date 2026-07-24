@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flask-pod
+  labels:
+    app: flask-pod
+spec:
+  containers:
+    - name: flask-container
+      image: flask-container-demo:latest
+      # IfNotPresent is crucial so that Kubernetes uses the locally loaded image 
+      # instead of trying to download it from Docker Hub.
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 5000

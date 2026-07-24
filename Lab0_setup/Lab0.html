@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 0: Environment Setup Guide</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI & JetBrains Mono for Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --accent-orange: #d97706;
+      --border-color: #e2e8f0;
+      --code-bg: #0f172a;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- CODE BLOCK CONTAINER --- */
+    .code-block-container {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.725rem;
+      color: #c084fc;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #f8fafc;
+    }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">0</div>
+      <div class="brand-title">Lab 0: Environment Setup</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Core Developer Tools</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Kubernetes & Minikube</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Java & Spark Runtimes</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">EKS & EMR on EKS</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Post-Installation Matrix</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OVERVIEW & ARCHITECTURE
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Architecture</h1>
+        <p class="subtitle">Setting up workstation tools, Kubernetes engines, and AWS cloud runtimes.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Skip Installed Tools</div>
+          <div class="callout-content">
+            <p>If any software tool (such as Git, Docker, Python, or AWS CLI) is already installed on your system and passes its verification command, <b>you do NOT need to reinstall it</b>. Run the verification test command and mark the task as complete!</p>
+          </div>
+        </div>
+
+        <h2>Workstation & Cloud Integration Map</h2>
+        <p>This course relies on a hybrid execution setup combining local containerized testing with cloud-scale Kubernetes clusters on AWS:</p>
+
+        <ul class="bullet-list">
+          <li><b>Local Development</b>: Docker Desktop, Minikube, JDK 17, and PySpark client tools.</li>
+          <li><b>Cloud Orchestration</b>: Amazon EKS clusters managed via <code>eksctl</code> and <code>kubectl</code>.</li>
+          <li><b>Serverless Big Data</b>: EMR on EKS Virtual Clusters executing Spark submit jobs with IAM Execution Roles.</li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Review Prerequisites & Architecture</span>
+              <span class="task-desc">Verify system requirements and understand the hybrid workstation & AWS EKS architecture.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): CORE DEVELOPER TOOLS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Core Developer Tools</h1>
+        <p class="subtitle">Git, AWS CLI v2, Visual Studio Code, Docker Desktop, and Python 3.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS (Homebrew)</button>
+          <button class="os-tab-btn" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux (Bash)</button>
+        </div>
+
+        <!-- 2.1 GIT -->
+        <h2>2.1 Git Version Control</h2>
+        <p>Required for cloning training repositories and versioning PySpark code.</p>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install --id Git.Git -e --source winget</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install git</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo apt update && sudo apt install -y git</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>git --version</code></pre>
+        </div>
+
+        <!-- 2.2 AWS CLI V2 -->
+        <h2>2.2 AWS CLI (v2)</h2>
+        <p>Required to manage AWS services, authenticate EKS clusters, and configure S3 access.</p>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>msiexec.exe /i "https://awscli.amazonaws.com/AWSCLIV2.msi"</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install awscli</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>aws --version</code></pre>
+        </div>
+
+        <!-- 2.3 VS CODE -->
+        <h2>2.3 Visual Studio Code</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install Microsoft.VisualStudioCode</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install --cask visual-studio-code</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo snap install --classic code</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>code --version</code></pre>
+        </div>
+
+        <!-- 2.4 DOCKER DESKTOP -->
+        <h2>2.4 Docker Desktop / Runtime Engine</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install Docker.DockerDesktop</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install --cask docker</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo apt install -y docker.io && sudo usermod -aG docker $USER</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>docker --version
+docker info</code></pre>
+        </div>
+
+        <!-- 2.5 PYTHON 3 -->
+        <h2>2.5 Python 3 (v3.10+)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install Python.Python.3.11</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install python@3.10</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo apt install -y python3 python3-pip</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>python3 --version</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Git & AWS CLI</span>
+              <span class="task-desc">Confirm `git --version` and `aws --version` display valid releases.</span>
+            </div>
+          </li>
+          <li class="task-checkbox-container" data-task-id="t1_2">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Docker Desktop & Python 3</span>
+              <span class="task-desc">Confirm `docker info` runs without error and `python3` is v3.10+.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): KUBERNETES & MINIKUBE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Kubernetes & Orchestration Tools</h1>
+        <p class="subtitle">Installing kubectl, eksctl, and local Minikube engines.</p>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS (Homebrew)</button>
+          <button class="os-tab-btn" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux (Bash)</button>
+        </div>
+
+        <!-- 3.1 KUBECTL -->
+        <h2>3.1 Kubernetes CLI (`kubectl`)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install Kubernetes.kubectl</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install kubectl</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo snap install kubectl --classic</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>kubectl version --client</code></pre>
+        </div>
+
+        <!-- 3.2 EKSCTL -->
+        <h2>3.2 Amazon EKS CLI (`eksctl`)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install eksctl</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew tap eksctl-io/tap && brew install eksctl-io/tap/eksctl</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && sudo mv /tmp/eksctl /usr/local/bin</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>eksctl version</code></pre>
+        </div>
+
+        <!-- 3.3 MINIKUBE -->
+        <h2>3.3 Minikube (Local Kubernetes Engine)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install Kubernetes.minikube</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install minikube</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && sudo install minikube-linux-amd64 /usr/local/bin/minikube</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>minikube version</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Kubernetes CLIs</span>
+              <span class="task-desc">Confirm `kubectl version --client`, `eksctl version`, and `minikube version` return cleanly.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): JAVA & SPARK RUNTIMES
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Big Data Runtimes</h1>
+        <p class="subtitle">Java Development Kit (JDK 17) and Apache Spark Client 3.5.1.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Java 17 Version Requirement</div>
+          <div class="callout-content">
+            <p>Apache Spark 3.5.x strictly requires <b>JDK 17</b>. Versions newer than Java 17 (such as JDK 21) trigger internal reflection errors during <code>spark-submit</code>.</p>
+          </div>
+        </div>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS (Homebrew)</button>
+          <button class="os-tab-btn" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux (Bash)</button>
+        </div>
+
+        <!-- 4.1 JDK 17 -->
+        <h2>4.1 Java Development Kit (JDK 17)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>winget install EclipseAdoptium.Temurin.17.JDK</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>brew install openjdk@17
+sudo ln -sfn /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk
+echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 17)' >> ~/.zshrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>sudo apt install -y openjdk-17-jdk
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
+echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>java -version</code></pre>
+        </div>
+
+        <!-- 4.2 SPARK CLIENT -->
+        <h2>4.2 Apache Spark Client (v3.5.1)</h2>
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>Invoke-WebRequest -Uri "https://archive.apache.org/dist/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz" -OutFile "spark-3.5.1-bin-hadoop3.tgz"
+tar -xzf spark-3.5.1-bin-hadoop3.tgz
+[System.Environment]::SetEnvironmentVariable('SPARK_HOME', 'D:\spark-3.5.1-bin-hadoop3', 'User')
+$env:PATH += ";D:\spark-3.5.1-bin-hadoop3\bin"</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">macOS Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>curl -O https://archive.apache.org/dist/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
+mkdir -p ~/spark && tar -xzf spark-3.5.1-bin-hadoop3.tgz -C ~/spark
+echo 'export SPARK_HOME=$HOME/spark/spark-3.5.1-bin-hadoop3' >> ~/.zshrc
+echo 'export PATH="$SPARK_HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc</code></pre>
+          </div>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Linux Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>curl -O https://archive.apache.org/dist/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
+mkdir -p ~/spark && tar -xzf spark-3.5.1-bin-hadoop3.tgz -C ~/spark
+echo 'export SPARK_HOME=$HOME/spark/spark-3.5.1-bin-hadoop3' >> ~/.bashrc
+echo 'export PATH="$SPARK_HOME/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc</code></pre>
+          </div>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>spark-submit --version</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Java 17 & Spark 3.5.1</span>
+              <span class="task-desc">Confirm `java -version` prints 17.0.x and `spark-submit --version` displays Spark 3.5.1.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): EKS & EMR ON EKS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Cloud EKS, EMR Virtual Cluster & IAM Roles</h1>
+        <p class="subtitle">Provisioning Amazon EKS, binding EMR virtual clusters, and configuring IAM execution roles.</p>
+
+        <h2>5.1 Amazon EKS Cluster Creation</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>eksctl create cluster --name spark-eks-cluster --region us-east-1 --nodegroup-name standard-workers --node-type t3.medium --nodes 2</code></pre>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>kubectl get nodes
+eksctl get cluster --name spark-eks-cluster --region us-east-1</code></pre>
+        </div>
+
+        <h2>5.2 EKS Virtual Cluster (EMR on EKS)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code># Create k8s namespace for spark workloads
+kubectl create namespace spark
+
+# Enable OIDC provider for IRSA
+eksctl utils associate-iam-oidc-provider --cluster spark-eks-cluster --region us-east-1 --approve
+
+# Create EMR Virtual Cluster
+aws emr-containers create-virtual-cluster --name spark-emr-virtual-cluster --container-provider '{"id": "spark-eks-cluster", "type": "EKS", "info": {"eksInfo": {"namespace": "spark"}}}'</code></pre>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>aws emr-containers list-virtual-clusters</code></pre>
+        </div>
+
+        <h2>5.3 IAM Execution Roles Setup</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>cat <<EOF > trust-policy.json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "emr-containers.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name EMRContainersJobExecutionRole --assume-role-policy-document file://trust-policy.json
+aws iam attach-role-policy --role-name EMRContainersJobExecutionRole --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess</code></pre>
+        </div>
+
+        <h2>5.4 Test `spark-submit` on EMR on EKS</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>aws emr-containers start-job-run \
+  --virtual-cluster-id <VIRTUAL_CLUSTER_ID> \
+  --name pi-test-job \
+  --execution-role-arn arn:aws:iam::<ACCOUNT_ID>:role/EMRContainersJobExecutionRole \
+  --release-label emr-6.10.0-latest \
+  --job-driver '{"sparkSubmitJobDriver": {"entryPoint": "s3://<YOUR_BUCKET>/jobs/pi.py"}}'</code></pre>
+        </div>
+        <p><b>Verification Command:</b></p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Test Step</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>aws emr-containers describe-job-run --virtual-cluster-id <VIRTUAL_CLUSTER_ID> --id <JOB_RUN_ID></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify EKS Cluster & EMR Virtual Cluster</span>
+              <span class="task-desc">Confirm EKS nodes are Ready and `list-virtual-clusters` returns active cluster ID.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): POST-INSTALLATION & MATRIX
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Post-Installation Matrix</h1>
+        <p class="subtitle">Final credential setup, session cleanup, and verification table.</p>
+
+        <h2>6.1 Post-Installation Configuration</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code># Configure AWS CLI credentials
+aws configure
+
+# Clean up legacy PySpark environment variables
+unset PYSPARK_PYTHON
+unset PYSPARK_DRIVER_PYTHON
+
+# Start Minikube local test cluster
+minikube start --driver=docker
+kubectl get nodes</code></pre>
+        </div>
+
+        <h2>6.2 System Verification Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tool Component</th>
+              <th>Verification Command</th>
+              <th>Expected Output Pattern</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Git</b></td><td><code>git --version</code></td><td><code>git version 2.x.x</code></td></tr>
+            <tr><td><b>AWS CLI (v2)</b></td><td><code>aws --version</code></td><td><code>aws-cli/2.x.x</code></td></tr>
+            <tr><td><b>VS Code</b></td><td><code>code --version</code></td><td><code>1.x.x</code></td></tr>
+            <tr><td><b>Docker</b></td><td><code>docker --version</code></td><td><code>Docker version 2x.x.x</code></td></tr>
+            <tr><td><b>Python 3</b></td><td><code>python3 --version</code></td><td><code>Python 3.10.x+</code></td></tr>
+            <tr><td><b>kubectl</b></td><td><code>kubectl version --client</code></td><td><code>Client Version: v1.x.x</code></td></tr>
+            <tr><td><b>eksctl</b></td><td><code>eksctl version</code></td><td><code>0.x.x</code></td></tr>
+            <tr><td><b>Minikube</b></td><td><code>minikube version</code></td><td><code>minikube version: v1.x.x</code></td></tr>
+            <tr><td><b>JDK 17</b></td><td><code>java -version</code></td><td><code>openjdk version "17.0.x"</code></td></tr>
+            <tr><td><b>Spark Client</b></td><td><code>spark-submit --version</code></td><td><code>Welcome to Spark version 3.5.1</code></td></tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Post-Installation Checks</span>
+              <span class="task-desc">Confirm all 10 tools are active and pass their respective verification commands.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 6; // 6 total panels (0 to 5)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === totalStepsCount - 1) {
+        btnNext.disabled = true;
+        btnNext.innerText = 'Lab Completed 🎉';
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+    }
+
+    // 5. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      updateProgress();
+      goToStep(0);
+    });
+  </script>
+</body>
+</html>

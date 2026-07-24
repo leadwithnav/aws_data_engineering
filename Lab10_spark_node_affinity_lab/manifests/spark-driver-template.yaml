@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-driver-template
+spec:
+  # Node Affinity tells Kubernetes where to schedule the driver pod
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                  - driver
+  containers:
+    - name: spark-driver
+      image: spark-container-demo:latest # Image will be overridden by spark-submit configuration

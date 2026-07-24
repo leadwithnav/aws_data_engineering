@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 1: Spark Execution Fundamentals</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI & JetBrains Mono for Code & Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --accent-orange: #d97706;
+      --border-color: #e2e8f0;
+      --code-bg: #0f172a;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- CODE BLOCK CONTAINER --- */
+    .code-block-container {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.725rem;
+      color: #c084fc;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #f8fafc;
+    }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* --- QUIZ & ASSESSMENT CARDS --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .quiz-question {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.1) !important;
+      border-color: var(--accent-green) !important;
+      color: var(--accent-green) !important;
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.1) !important;
+      border-color: var(--accent-red) !important;
+      color: var(--accent-red) !important;
+    }
+
+    /* --- CERTIFICATE CANVAS CONTAINER --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      outline: none;
+    }
+
+    .cert-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 0.25rem;
+    }
+
+    .btn-cert {
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-download {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    #certCanvas {
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- DIAGRAM SVG CONTAINER --- */
+    .tech-illustration {
+      width: 100%;
+      max-width: 480px;
+      height: auto;
+      margin: 1.5rem 0;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">1</div>
+      <div class="brand-title">Lab 1: Spark Execution Fundamentals</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Concepts</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Driver, Executors & Hierarchy</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Narrow vs. Wide Transformations</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Start App & Spark UI</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">Notebook Execution & UI</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Knowledge Quiz</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OVERVIEW & CONCEPTS
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Execution Concepts</h1>
+        <p class="subtitle">Visualizing Jobs, Stages, Tasks, and Data Shuffles in Apache Spark.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Learning Objective</div>
+          <div class="callout-content">
+            <p>Build a deep conceptual and visual understanding of how the <b>Apache Spark Engine</b> plans and executes data pipelines. Learn how user code translates into logical plans, DAG stages, tasks across worker nodes, and physical network shuffles.</p>
+          </div>
+        </div>
+
+        <h2>Spark Execution Architecture Overview</h2>
+        <p>Apache Spark uses a distributed runtime model to process large data volumes concurrently. Key execution components include:</p>
+
+        <ul class="bullet-list">
+          <li><b>Spark Driver</b>: The master process managing the <code>SparkSession</code>, building the DAG of stages, and orchestrating worker tasks.</li>
+          <li><b>Spark Executors</b>: Worker processes executing tasks on data partitions in memory or disk.</li>
+          <li><b>DAG (Directed Acyclic Graph)</b>: Spark's physical execution plan detailing how transformations stream into final actions.</li>
+          <li><b>Spark UI Dashboard</b>: The live web portal (port 4040) used to inspect active jobs, stage DAGs, shuffle read/write bytes, and SQL plan trees.</li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Execution Architecture</span>
+              <span class="task-desc">Understand the role of Driver, Executor nodes, DAG DAGs, and Spark UI metrics.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): DRIVER, EXECUTORS & HIERARCHY
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Driver, Executors & Execution Hierarchy</h1>
+        <p class="subtitle">Mapping code actions to Jobs, Stages, Tasks, and Data Partitions.</p>
+
+        <h2>Spark Architectural Roles</h2>
+        <ul>
+          <li><b>Spark Driver (Master)</b>: Hosts the main program entry point (<code>SparkSession</code>). Analyzes code, constructs logical & physical plans, schedules tasks, and collects results.</li>
+          <li><b>Spark Executors (Workers)</b>: Isolated processes running on cluster nodes. They execute assigned tasks, perform compute operations on data partitions, and write output.</li>
+        </ul>
+
+        <h2>Execution Abstraction Hierarchy</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Abstraction Level</th>
+              <th>Description</th>
+              <th>Trigger / Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Job</b></td>
+              <td>Highest unit of execution. Created whenever a Spark <i>Action</i> is called (e.g. <code>.write.save()</code>, <code>.count()</code>).</td>
+              <td>Triggered by Action</td>
+            </tr>
+            <tr>
+              <td><b>Stage</b></td>
+              <td>A set of parallel tasks executing identical compute logic without network data movement.</td>
+              <td>Bounded by Shuffles</td>
+            </tr>
+            <tr>
+              <td><b>Task</b></td>
+              <td>The smallest unit of work. Executed by 1 CPU core on 1 partition.</td>
+              <td>1 Task per Partition</td>
+            </tr>
+            <tr>
+              <td><b>Partition</b></td>
+              <td>A physical split of a large dataset processed in memory by worker nodes.</td>
+              <td>Data Chunk</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Spark Pipeline & Stage Visual Diagram</h2>
+        <!-- High-Contrast Vector SVG Execution Diagram -->
+        <svg class="tech-illustration" viewBox="0 0 400 270" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="0" x2="20" y2="280" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="120" y1="0" x2="120" y2="280" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="220" y1="0" x2="220" y2="280" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="320" y1="0" x2="320" y2="280" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+
+          <!-- Driver Block -->
+          <rect x="25" y="45" width="110" height="90" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <rect x="25" y="45" width="110" height="25" rx="8" fill="#f1f5f9" />
+          <line x1="25" y1="70" x2="135" y2="70" stroke="#cbd5e1" stroke-width="1.5" />
+          <text x="35" y="61" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">SPARK DRIVER</text>
+          <text x="35" y="90" font-family="JetBrains Mono, monospace" font-size="8" fill="#2563eb" font-weight="600">SparkSession</text>
+          <text x="35" y="108" font-family="Inter, sans-serif" font-size="7" fill="#475569">DAG Scheduler</text>
+
+          <!-- Arrow -->
+          <path d="M145 90 H205" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="4 2" />
+          <path d="M201 86 L208 90 L201 94 Z" fill="#2563eb" />
+
+          <!-- Stages -->
+          <rect x="215" y="30" width="165" height="210" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <rect x="215" y="30" width="165" height="25" rx="8" fill="#f1f5f9" />
+          <line x1="215" y1="55" x2="380" y2="55" stroke="#cbd5e1" stroke-width="1.5" />
+          <text x="225" y="46" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">SPARK JOB PIPELINE</text>
+
+          <!-- Stage 0 -->
+          <rect x="225" y="68" width="145" height="65" rx="6" fill="#0f172a" />
+          <text x="235" y="83" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">STAGE 0 (Narrow)</text>
+          <text x="235" y="100" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">FileScan -> Filter</text>
+          <text x="235" y="115" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">Local Execution</text>
+
+          <!-- Shuffle boundary -->
+          <path d="M297 133 V168" stroke="#d97706" stroke-width="2" stroke-dasharray="2 2" />
+          <circle cx="297" cy="150" r="8" fill="#d97706" />
+          <text x="294" y="153" font-family="Inter, sans-serif" font-weight="800" font-size="8" fill="#ffffff">S</text>
+          <text x="310" y="153" font-family="Inter, sans-serif" font-size="7" font-weight="700" fill="#d97706">SHUFFLE</text>
+
+          <!-- Stage 1 -->
+          <rect x="225" y="168" width="145" height="60" rx="6" fill="rgba(5, 150, 105, 0.15)" stroke="#059669" stroke-width="1.5" />
+          <text x="235" y="183" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#059669">STAGE 1 (Reduce)</text>
+          <text x="235" y="200" font-family="JetBrains Mono, monospace" font-size="7" fill="#475569">GroupBy Aggregate</text>
+          <text x="235" y="215" font-family="JetBrains Mono, monospace" font-size="7" fill="#475569">Network Exchange</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Master Execution Hierarchy</span>
+              <span class="task-desc">Understand how actions trigger Jobs, how shuffles break jobs into Stages, and how partitions map to Tasks.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): NARROW VS WIDE TRANSFORMATIONS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Narrow vs. Wide Transformations</h1>
+        <p class="subtitle">Understanding data dependencies and shuffle boundary generation.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ The Performance Impact of Shuffles</div>
+          <div class="callout-content">
+            <p>Wide transformations require shuffling data across worker nodes over the network. Network I/O and disk serialization during shuffles are the primary bottleneck in big data pipelines.</p>
+          </div>
+        </div>
+
+        <h2>1. Narrow Transformations (No Shuffle)</h2>
+        <p>Operations where each input partition contributes to <b>exactly one</b> output partition. Data remains inside the memory of the executing worker node without network transfers.</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">PySpark Code</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code># Narrow operations: Pipelined within a single Stage
+filtered_df = df.filter(df["Amount"] > 100.0) \
+                .select("OrderID", "CustomerID", "Amount")</code></pre>
+        </div>
+
+        <h2>2. Wide Transformations (Triggers Network Shuffle)</h2>
+        <p>Operations where input partitions contribute to <b>multiple</b> output partitions. Spark must redistribute records across cluster nodes based on key hashes, splitting the job into distinct Stages.</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">PySpark Code</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code># Wide operation: Triggers a Shuffle Exchange boundary and starts Stage 1
+grouped_df = df.groupBy("Category").sum("Amount")</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Identify Transformation Dependencies</span>
+              <span class="task-desc">Distinguish narrow operations (filter, select) from wide operations (groupBy, join).</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): START NOTEBOOK & SPARK UI SETUP
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Start App & Spark UI Setup</h1>
+        <p class="subtitle">Launching the local PySpark Jupyter environment and connecting to Spark UI.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>cd d:\trainings\aws_data_engineering\Lab1_spark_execution_fundamentals
+.\local\run_notebook.ps1</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code>cd ~/trainings/aws_data_engineering/Lab1_spark_execution_fundamentals
+chmod +x local/run_notebook.sh
+./local/run_notebook.sh</code></pre>
+          </div>
+        </div>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">🌐 Access Links</div>
+          <div class="callout-content">
+            <p>• <b>Jupyter Notebook Server</b>: <a href="http://localhost:8888/notebooks/spark_execution_fundamentals.ipynb" target="_blank">http://localhost:8888/notebooks/spark_execution_fundamentals.ipynb</a></p>
+            <p>• <b>Live Spark UI Dashboard</b>: <a href="http://localhost:4040" target="_blank">http://localhost:4040</a> (active as soon as SparkSession initializes).</p>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Start Container & Connect to Spark UI</span>
+              <span class="task-desc">Run launcher script, open Jupyter notebook, and verify port 4040 Spark UI connectivity.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): NOTEBOOK EXECUTION & UI EXPLORATION
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Notebook Execution & UI Exploration</h1>
+        <p class="subtitle">Executing notebook cells and inspecting physical DAG plans in the Spark UI.</p>
+
+        <h2>Key Experiments & Spark UI Observations</h2>
+
+        <h3>1. Schema Inference & Job Creation</h3>
+        <p>Observe how data loading behaves based on schema settings:</p>
+        <ul>
+          <li><b><code>inferSchema=false</code></b>: Creates <b>1 Job</b> to read file header lines.</li>
+          <li><b><code>inferSchema=true</code></b>: Creates <b>2 Jobs</b> (Job 1 scans sample rows to infer column datatypes; Job 2 loads the dataset).</li>
+        </ul>
+
+        <h3>2. Actions vs. Transformations</h3>
+        <p>Transformations are lazy and create no jobs. Calling an Action triggers actual execution:</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">PySpark Code</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code># Trigger write action without displaying console truncation
+final_report.write.mode("overwrite").format("noop").save()</code></pre>
+        </div>
+
+        <h3>3. Spark UI Tabs to Inspect</h3>
+        <ul>
+          <li><b>Jobs Tab</b>: Lists completed & active jobs, job duration, and total completed stages.</li>
+          <li><b>Stages Tab</b>: Displays stage DAG visualizations, task completion progress, and <b>Shuffle Read / Shuffle Write</b> payload metrics.</li>
+          <li><b>SQL / DataFrame Tab</b>: Visualizes physical query execution plan nodes (FileScan, HashAggregate, Exchange).</li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Notebook Experiments</span>
+              <span class="task-desc">Execute all cells in `spark_execution_fundamentals.ipynb` and analyze the DAGs in Spark UI.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Spark Jobs, Stages, Tasks, Shuffles, and Spark UI metrics.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. What triggers the creation and execution of a new Spark Job?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="false">A) Invoking a narrow transformation like `.select()` or `.filter()`</div>
+            <div class="quiz-option" data-correct="true">B) Calling a Spark Action like `.write.save()`, `.count()`, or `.collect()`</div>
+            <div class="quiz-option" data-correct="false">C) Creating a DataFrame with `spark.read.csv()` when inferSchema is False</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. Why does calling `spark.read.option("inferSchema", True).csv(...)` create 2 Spark Jobs instead of 1?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Job 1 scans sample data rows to infer column data types, while Job 2 reads the actual dataset.</div>
+            <div class="quiz-option" data-correct="false">B) Job 1 creates the DataFrame metadata, and Job 2 writes data to memory.</div>
+            <div class="quiz-option" data-correct="false">C) One job is executed on the driver and the second job on executor nodes.</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. What causes Spark to split a Job into multiple Execution Stages?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="false">A) Reaching a memory capacity threshold on a worker node</div>
+            <div class="quiz-option" data-correct="true">B) Encountering a Wide Transformation (e.g. `groupBy`, `join`) that requires a network Shuffle Exchange</div>
+            <div class="quiz-option" data-correct="false">C) Having more than 200 tasks in a single partition</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">4. Why is `.write.mode("overwrite").format("noop").save()` preferred over `.show()` when analyzing execution plans in Spark UI?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) It processes the complete physical execution plan across all partitions without output truncation or driver memory overhead.</div>
+            <div class="quiz-option" data-correct="false">B) It disables Adaptive Query Execution (AQE).</div>
+            <div class="quiz-option" data-correct="false">C) It bypasses network shuffles.</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Check</span>
+              <span class="task-desc">Answer all 4 questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Completion Certificate</h1>
+        <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
+
+        <!-- Locked Card Message (shown when progress < 100%) -->
+        <div class="callout callout-amber" id="certLockMessage">
+          <div class="callout-title">🔒 Certificate Locked</div>
+          <div class="callout-content">
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
+          </div>
+        </div>
+
+        <!-- Unlocked Certificate Container (hidden when locked) -->
+        <div class="cert-canvas-container" id="certUnlockedContainer" style="display: none;">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Name" value="" oninput="generateCertificate()">
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS (lab_structure.md)
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === 5) {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Go to Certificate →';
+      } else if (currentStep === 6) {
+        const containers = document.querySelectorAll('.task-checkbox-container');
+        let checked = 0;
+        containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
+        const pct = (containers.length > 0) ? Math.round((checked / containers.length) * 100) : 0;
+
+        if (pct === 100) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Lab Completed 🎉';
+          generateCertificate();
+        } else {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+
+      const lockMsg = document.getElementById('certLockMessage');
+      const unlockedContainer = document.getElementById('certUnlockedContainer');
+      const lockPercent = document.getElementById('certLockPercent');
+      const certSubtitle = document.getElementById('certSubtitle');
+      const btnNext = document.getElementById('btnNext');
+
+      if (lockPercent) lockPercent.innerText = percentage + '%';
+
+      if (percentage === 100) {
+        if (lockMsg) lockMsg.style.display = 'none';
+        if (unlockedContainer) unlockedContainer.style.display = 'flex';
+        if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
+        if (currentStep === 6) {
+          if (btnNext) {
+            btnNext.disabled = true;
+            btnNext.innerText = 'Lab Completed 🎉';
+          }
+          generateCertificate();
+        }
+      } else {
+        if (lockMsg) lockMsg.style.display = 'block';
+        if (unlockedContainer) unlockedContainer.style.display = 'none';
+        if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
+        if (currentStep === 6 && btnNext) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      }
+    }
+
+    // 5. Quiz Assessment Controller
+    function setupQuizListeners() {
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.addEventListener('click', function() {
+          const parent = this.parentElement;
+          const allSiblings = parent.querySelectorAll('.quiz-option');
+          allSiblings.forEach(s => s.classList.remove('correct', 'incorrect'));
+
+          const isCorrect = this.getAttribute('data-correct') === 'true';
+          if (isCorrect) {
+            this.classList.add('correct');
+          } else {
+            this.classList.add('incorrect');
+          }
+        });
+      });
+    }
+
+    // 6. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // 7. Certificate Generator (Canvas API - Reverted to Previous Parchment Style)
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const inputVal = document.getElementById('studentNameInput').value.trim();
+      const studentName = inputVal || 'Enter Your Name';
+
+      // 1. Background Fill (Soft Ivory Cream Parchment)
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#fcfbfa');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Outer Dark Navy Border Frame
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+      // 3. Inner Gold Accent Border Frame
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      // 4. Corner Ornaments (Gold Diamonds)
+      const corners = [
+        [34, 34], [canvas.width - 34, 34],
+        [34, canvas.height - 34], [canvas.width - 34, canvas.height - 34]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 5. Main Certificate Title
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b45309';
+      ctx.font = '800 28px "Outfit", sans-serif';
+      ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 105);
+
+      // Subtitle
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.fillText('THIS IS PROUDLY PRESENTED TO', canvas.width / 2, 145);
+
+      // 6. Student Name
+      ctx.fillStyle = inputVal ? '#1e40af' : '#94a3b8';
+      ctx.font = '800 34px "Outfit", sans-serif';
+      ctx.fillText(studentName, canvas.width / 2, 195);
+
+      // Decorative Underline below Name
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2 - 140, 210);
+      ctx.lineTo(canvas.width / 2 + 140, 210);
+      ctx.stroke();
+
+      // 7. Description Text
+      ctx.fillStyle = '#334155';
+      ctx.font = '14px "Inter", sans-serif';
+      ctx.fillText('For successfully mastering Apache Spark execution fundamentals, physical DAG plans,', canvas.width / 2, 252);
+      ctx.fillText('stage shuffling, and performance optimization on Amazon Web Services.', canvas.width / 2, 274);
+
+      // 8. Official Seal / Badge (Bottom Center)
+      const sealX = canvas.width / 2;
+      const sealY = 385;
+
+      // Outer Gold Seal Ring
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner Purple Ring
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Center Gold Star
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", sans-serif';
+      ctx.fillText('★', sealX, sealY + 7);
+
+      // 9. Date of Issuance (Bottom Left)
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 13px "Inter", sans-serif';
+      ctx.fillText(`Issued: ${today}`, 65, 380);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(65, 405);
+      ctx.lineTo(205, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px "Inter", sans-serif';
+      ctx.fillText('Date of Issuance', 65, 422);
+
+      // 10. Cursive Signature & Title (Bottom Right)
+      ctx.textAlign = 'right';
+      
+      // Small Cursive Signature signed by "Navdeep Kaur"
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '400 26px "Great Vibes", cursive';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 372);
+
+      // Signature Line
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 245, 405);
+      ctx.lineTo(canvas.width - 65, 405);
+      ctx.stroke();
+
+      // Printed Name & Title
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '700 13px "Outfit", sans-serif';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 422);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 11px "Inter", sans-serif';
+      ctx.fillText('Lead Instructor & Principal Architect', canvas.width - 65, 438);
+    }
+
+    // 8. Download Certificate Controller
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const imageURI = canvas.toDataURL("image/png");
+      const studentName = (document.getElementById('studentNameInput').value || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+      const link = document.createElement('a');
+      link.download = `Spark_Certificate_${studentName}.png`;
+      link.href = imageURI;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 9. Share Certificate Controller
+    function shareCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      
+      if (navigator.share) {
+        canvas.toBlob(blob => {
+          const file = new File([blob], 'Spark_Execution_Fundamentals_Certificate.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Spark Execution Fundamentals Certificate',
+            text: 'I just completed the Spark Execution Fundamentals training lab!',
+            files: [file]
+          }).catch(err => console.log('Share canceled:', err));
+        });
+      } else {
+        const studentName = document.getElementById('studentNameInput').value || 'Cloud Data Engineer';
+        const text = `🏆 I completed the Spark Execution Fundamentals training lab! Certificate awarded to: ${studentName}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById('btnShareCert');
+          const orig = btn.innerText;
+          btn.innerText = 'Copied Share Link! 🚀';
+          setTimeout(() => { btn.innerText = orig; }, 2000);
+        }).catch(err => console.error('Share failed:', err));
+      }
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      setupQuizListeners();
+      updateProgress();
+      goToStep(0);
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          if (currentStep === 6) generateCertificate();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

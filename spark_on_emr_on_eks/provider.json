@@ -1,0 +1,9 @@
+{
+  "id": "spark-eks-cluster-new2",
+  "type": "EKS",
+  "info": {
+    "eksInfo": {
+      "namespace": "emr-jobs"
+    }
+  }
+}

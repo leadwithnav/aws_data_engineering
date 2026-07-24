@@ -1,0 +1,11 @@
+OrderID,CustomerID,ProductID,Amount,Quantity
+101,1,ProdA,250.0,2
+102,2,ProdB,150.0,1
+103,1,ProdC,300.0,3
+104,3,ProdA,125.0,1
+105,4,ProdB,450.0,3
+106,2,ProdC,100.0,1
+107,3,ProdD,600.0,2
+108,1,ProdB,150.0,1
+109,5,ProdA,250.0,2
+110,6,ProdC,300.0,3

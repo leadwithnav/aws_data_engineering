@@ -1,0 +1,25 @@
+# Python files to ignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+
+# Editor & IDE configs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Git directory
+.git
+.gitignore
+.github
+
+# Documentation & docker config (only application code needed inside image)
+.dockerignore
+LAB_GUIDE.md

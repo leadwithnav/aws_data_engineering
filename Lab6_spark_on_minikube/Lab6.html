@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 6: Spark on Minikube</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --accent-orange: #ea580c;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR CONTAINER & SYNTAX HIGHLIGHTING SYSTEM --- */
+    .code-block-container {
+      background-color: #1e1e1e; /* VS Code Dark Plus Editor Background */
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526; /* VS Code Tab / Title Bar */
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe; /* VS Code Sky Blue Identifier */
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c; /* VS Code Blue Selection Accent */
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4; /* VS Code Standard Foreground Text */
+      background-color: #1e1e1e;
+    }
+
+    /* VS Code Dark Plus Syntax Highlighting Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; } /* VS Code Control Keywords (blue #569cd6) */
+    .token-control   { color: #c586c0; font-weight: 600; } /* VS Code Statement Keywords (purple #c586c0) */
+    .token-string    { color: #ce9178; }                   /* VS Code Strings (orange-brown #ce9178) */
+    .token-function  { color: #dcdcaa; }                   /* VS Code Functions & Methods (gold #dcdcaa) */
+    .token-type      { color: #4ec9b0; }                   /* VS Code Classes & Types (teal #4ec9b0) */
+    .token-variable  { color: #9cdcfe; }                   /* VS Code Variables & Parameters (sky blue #9cdcfe) */
+    .token-number    { color: #b5cea8; }                   /* VS Code Numbers (olive green #b5cea8) */
+    .token-comment   { color: #6a9955; font-style: italic; } /* VS Code Comments (green #6a9955) */
+    .token-prompt    { color: #808080; user-select: none; } /* VS Code Terminal Prompt Grey */
+    .token-decorator { color: #dcdcaa; font-weight: 600; } /* VS Code Python Decorators (@app.route) */
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* --- QUIZ CARDS --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .quiz-question {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.1) !important;
+      border-color: var(--accent-green) !important;
+      color: var(--accent-green) !important;
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.1) !important;
+      border-color: var(--accent-red) !important;
+      color: var(--accent-red) !important;
+    }
+
+    /* --- CERTIFICATE CANVAS CONTAINER --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      outline: none;
+    }
+
+    .cert-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 0.25rem;
+    }
+
+    .btn-cert {
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-download {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    #certCanvas {
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- DIAGRAM SVG CONTAINER --- */
+    .tech-illustration {
+      width: 100%;
+      max-width: 480px;
+      height: auto;
+      margin: 1.5rem 0;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">6</div>
+      <div class="brand-title">Lab 6: Spark on Minikube</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Prerequisites</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Containerize Spark App</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Load Image into Minikube</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Deploy Spark on Minikube</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">S3 Integration Flow</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Knowledge Quiz</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OVERVIEW & PREREQUISITES
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Prerequisites</h1>
+        <p class="subtitle">Dynamic Spark Driver & Executor Orchestration on Kubernetes.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Learning Objective</div>
+          <div class="callout-content">
+            <p>Deploying Apache Spark on Kubernetes provides scalable, isolated compute. Learn how to package PySpark scripts and AWS S3 connector JARs into Docker images, schedule dynamic Driver and Executor Pods on Minikube, pass local AWS IAM credentials securely into pods, and read/write datasets directly to Amazon S3 buckets.</p>
+          </div>
+        </div>
+
+        <h2>Spark Kubernetes Architecture</h2>
+        <!-- High-Contrast Vector Spark Submit Diagram -->
+        <svg class="tech-illustration" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="0" x2="20" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="120" y1="0" x2="120" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="220" y1="0" x2="220" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+          <line x1="320" y1="0" x2="320" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+
+          <!-- Local Workstation -->
+          <rect x="15" y="35" width="115" height="95" rx="6" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <rect x="15" y="35" width="115" height="20" rx="6" fill="#f1f5f9" />
+          <text x="22" y="48" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">LOCAL WORKSTATION</text>
+          <text x="22" y="70" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">spark-submit</text>
+          <text x="22" y="85" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Docker Image Build</text>
+          <rect x="22" y="95" width="95" height="18" rx="4" fill="#ea580c" />
+          <text x="26" y="107" font-family="JetBrains Mono, monospace" font-size="7" font-weight="700" fill="#ffffff">spark-on-minikube</text>
+
+          <!-- Minikube Image Load connector -->
+          <path d="M130 95 H235" stroke="#ea580c" stroke-width="2.5" stroke-dasharray="4 2" />
+          <path d="M231 91 L238 95 L231 99 Z" fill="#ea580c" />
+
+          <!-- Submit K8s API Call connector -->
+          <path d="M130 65 Q 170 30, 235 60" stroke="#2563eb" stroke-width="2.5" />
+          <path d="M231 54 L237 60 L229 62 Z" fill="#2563eb" />
+          <text x="145" y="42" font-family="Inter, sans-serif" font-size="7" font-weight="700" fill="#2563eb">K8s API Submit</text>
+
+          <!-- Minikube Cluster -->
+          <rect x="240" y="35" width="145" height="190" rx="8" fill="#0f172a" stroke="#94a3b8" stroke-width="2" />
+          <text x="250" y="53" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#ffffff">MINIKUBE K8S</text>
+          
+          <!-- Driver Pod -->
+          <rect x="250" y="68" width="125" height="45" rx="4" fill="rgba(37, 99, 235, 0.2)" stroke="#2563eb" stroke-width="1" />
+          <text x="256" y="83" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#60a5fa">spark-driver Pod</text>
+          <text x="256" y="97" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">Active Master Orchestrator</text>
+          
+          <!-- Executor Pod -->
+          <rect x="250" y="125" width="125" height="45" rx="4" fill="rgba(5, 150, 105, 0.2)" stroke="#059669" stroke-width="1" />
+          <text x="256" y="140" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#34d399">spark-exec-1 Pod</text>
+          <text x="256" y="154" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">Task Processor</text>
+
+          <!-- Service Account -->
+          <rect x="250" y="180" width="125" height="30" rx="4" fill="rgba(255, 255, 255, 0.05)" stroke="#64748b" stroke-width="1" />
+          <text x="256" y="198" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">spark-sa ServiceAccount</text>
+        </svg>
+
+        <h2>Prerequisites Checklist</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>Required Functionality</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Docker Desktop</code></td>
+              <td>Container engine running locally.</td>
+            </tr>
+            <tr>
+              <td><code>kubectl</code></td>
+              <td>Kubernetes cluster management CLI.</td>
+            </tr>
+            <tr>
+              <td><code>Minikube</code></td>
+              <td>Local single-node Kubernetes cluster.</td>
+            </tr>
+            <tr>
+              <td><code>AWS CLI v2</code></td>
+              <td>Configured with credentials via <code>aws configure</code> for Amazon S3 reads/writes.</td>
+            </tr>
+            <tr>
+              <td><code>OpenJDK 17</code></td>
+              <td>Required locally to launch client-side <code>spark-submit</code> commands.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Prerequisites & Architecture</span>
+              <span class="task-desc">Confirm Docker Desktop, kubectl, Minikube, AWS CLI v2, and OpenJDK 17 are ready.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): CONTAINERIZE SPARK APP
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Containerize Spark App</h1>
+        <p class="subtitle">Bundling PySpark script and Hadoop AWS S3 connector JARs into Docker.</p>
+
+        <h2>1. PySpark Application (`app/spark_app.py`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Python Code (spark_app.py)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">import</span> <span class="token-variable">os</span>, <span class="token-variable">sys</span>
+<span class="token-keyword">from</span> <span class="token-variable">pyspark.sql</span> <span class="token-keyword">import</span> <span class="token-type">SparkSession</span>
+<span class="token-keyword">from</span> <span class="token-variable">pyspark.sql.functions</span> <span class="token-keyword">import</span> <span class="token-function">col</span>, <span class="token-function">sum</span> <span class="token-keyword">as</span> <span class="token-variable">_sum</span>, <span class="token-function">count</span>, <span class="token-function">round</span> <span class="token-keyword">as</span> <span class="token-variable">_round</span>
+
+<span class="token-keyword">def</span> <span class="token-function">main</span>():
+    <span class="token-variable">spark</span> = <span class="token-type">SparkSession</span>.<span class="token-variable">builder</span> \
+        .<span class="token-function">appName</span>(<span class="token-string">"SparkMinikubeDemo"</span>) \
+        .<span class="token-function">getOrCreate</span>()
+    
+    <span class="token-variable">spark</span>.<span class="token-variable">sparkContext</span>.<span class="token-function">setLogLevel</span>(<span class="token-string">"ERROR"</span>)
+    
+    <span class="token-variable">s3_bucket</span> = <span class="token-variable">os</span>.<span class="token-variable">environ</span>.<span class="token-function">get</span>(<span class="token-string">"S3_BUCKET"</span>, <span class="token-string">""</span>)
+    <span class="token-control">if</span> <span class="token-variable">s3_bucket</span>:
+        <span class="token-variable">input_path</span> = <span class="token-string">f"s3a://{s3_bucket}/sample_data.csv"</span>
+        <span class="token-variable">output_path</span> = <span class="token-string">f"s3a://{s3_bucket}/spark-output/"</span>
+    <span class="token-control">else</span>:
+        <span class="token-variable">input_path</span> = <span class="token-string">"/opt/spark/work-dir/sample_data.csv"</span>
+        <span class="token-variable">output_path</span> = <span class="token-control">None</span>
+
+    <span class="token-variable">print</span>(<span class="token-string">f"Reading transaction data from {input_path}..."</span>)
+    <span class="token-variable">df</span> = <span class="token-variable">spark</span>.<span class="token-variable">read</span>.<span class="token-function">csv</span>(<span class="token-variable">input_path</span>, <span class="token-variable">header</span>=<span class="token-control">True</span>, <span class="token-variable">inferSchema</span>=<span class="token-control">True</span>)
+    
+    <span class="token-variable">agg_df</span> = <span class="token-variable">df</span>.<span class="token-function">groupBy</span>(<span class="token-string">"Category"</span>).<span class="token-function">agg</span>(
+        <span class="token-function">count</span>(<span class="token-string">"OrderID"</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalOrders"</span>),
+        <span class="token-variable">_round</span>(<span class="token-variable">_sum</span>(<span class="token-string">"Amount"</span>), <span class="token-number">2</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalRevenue"</span>)
+    ).<span class="token-function">orderBy</span>(<span class="token-function">col</span>(<span class="token-string">"TotalRevenue"</span>).<span class="token-function">desc</span>())
+    
+    <span class="token-variable">agg_df</span>.<span class="token-function">show</span>()
+    
+    <span class="token-control">if</span> <span class="token-variable">output_path</span>:
+        <span class="token-variable">print</span>(<span class="token-string">f"Writing parquet output to {output_path}..."</span>)
+        <span class="token-variable">agg_df</span>.<span class="token-variable">write</span>.<span class="token-function">mode</span>(<span class="token-string">"overwrite"</span>).<span class="token-function">parquet</span>(<span class="token-variable">output_path</span>)
+        <span class="token-variable">print</span>(<span class="token-string">"Parquet write complete!"</span>)
+
+    <span class="token-variable">spark</span>.<span class="token-function">stop</span>()
+
+<span class="token-control">if</span> <span class="token-variable">__name__</span> == <span class="token-string">"__main__"</span>:
+    <span class="token-function">main</span>()</code></pre>
+        </div>
+
+        <h2>2. Dockerfile with AWS S3 JARs (`app/Dockerfile`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">FROM</span> <span class="token-variable">apache/spark:3.5.1</span>
+
+<span class="token-keyword">USER</span> <span class="token-variable">root</span>
+
+<span class="token-comment"># Download Hadoop AWS and AWS SDK bundle JARs into Spark jars directory</span>
+<span class="token-keyword">ADD</span> <span class="token-string">https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar /opt/spark/jars/</span>
+<span class="token-keyword">ADD</span> <span class="token-string">https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar /opt/spark/jars/</span>
+
+<span class="token-keyword">WORKDIR</span> <span class="token-string">/opt/spark/work-dir</span>
+
+<span class="token-keyword">COPY</span> <span class="token-string">spark_app.py /opt/spark/work-dir/</span>
+<span class="token-keyword">COPY</span> <span class="token-string">sample_data.csv /opt/spark/work-dir/</span>
+
+<span class="token-keyword">RUN</span> <span class="token-string">chown -R 185:185 /opt/spark/work-dir /opt/spark/jars</span>
+
+<span class="token-keyword">USER</span> <span class="token-number">185</span></code></pre>
+        </div>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <h2>3. Run Local Docker Test</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">d:\trainings\aws_data_engineering\Lab6_spark_on_minikube</span>
+<span class="token-string">.\local\run_local.ps1</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">~/trainings/aws_data_engineering/Lab6_spark_on_minikube</span>
+<span class="token-keyword">chmod</span> +x local/*.sh
+<span class="token-string">./local/run_local.sh</span></code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Build Image & Test Docker Run</span>
+              <span class="task-desc">Verify PySpark script and `hadoop-aws` JARs compile into `spark-on-minikube:latest`.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): LOAD IMAGE INTO MINIKUBE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Load Image into Minikube</h1>
+        <p class="subtitle">Transferring local container images into Minikube's internal registry cache.</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Minikube CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Load image into Minikube</span>
+<span class="token-keyword">minikube</span> <span class="token-function">image</span> load <span class="token-variable">spark-on-minikube:latest</span>
+
+<span class="token-comment"># Verify image exists in cluster cache</span>
+<span class="token-keyword">minikube</span> <span class="token-function">image</span> ls | grep <span class="token-string">"spark-on-minikube"</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Cache Image in Minikube</span>
+              <span class="task-desc">Execute `minikube image load` and confirm image presence in the cluster registry.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): DEPLOY SPARK ON MINIKUBE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Deploy Spark on Minikube</h1>
+        <p class="subtitle">Starting cluster, configuring RBAC service accounts, and submitting jobs.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <h2>1. Start Minikube Cluster</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">minikube</span> <span class="token-function">start</span> --driver=docker --memory=4096 --cpus=3
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">minikube</span> <span class="token-function">start</span> --driver=docker --memory=4096 --cpus=3
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span></code></pre>
+          </div>
+        </div>
+
+        <h2>2. Submit Spark Job to Minikube</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-string">.\local\submit_spark_minikube.ps1</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-string">./local/submit_spark_minikube.sh</span></code></pre>
+          </div>
+        </div>
+
+        <h2>3. Monitor Driver & Executor Pods</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Watch dynamic pod creation</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -w
+
+<span class="token-comment"># Inspect driver output logs</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">logs</span> <span class="token-variable">spark-driver</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Submit Spark Job to Minikube</span>
+              <span class="task-desc">Run submit script, monitor `spark-driver` and `spark-exec-1` pods, and view output logs.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): S3 INTEGRATION FLOW
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: S3 Integration Flow</h1>
+        <p class="subtitle">Passing local AWS IAM credentials to Spark K8s pods to read and write S3 bucket data.</p>
+
+        <h2>1. Upload Dataset to Amazon S3</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">mb</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME"</span> --region <span class="token-string">us-east-1</span>
+<span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">cp</span> <span class="token-string">"app/sample_data.csv"</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME/sample_data.csv"</span></code></pre>
+        </div>
+
+        <h2>2. Submit S3 Job with Local Credentials</h2>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-string">.\local\submit_spark_minikube.ps1</span> -b <span class="token-string">"YOUR_UNIQUE_BUCKET_NAME"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-string">./local/submit_spark_minikube.sh</span> -b <span class="token-string">"YOUR_UNIQUE_BUCKET_NAME"</span></code></pre>
+          </div>
+        </div>
+
+        <h2>3. Verify S3 Parquet Output</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">ls</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME/spark-output/"</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify S3 Read & Write</span>
+              <span class="task-desc">Confirm Spark read CSV from S3, executed aggregations, and wrote Parquet results back to S3.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Spark on Kubernetes and S3 integration.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. What roles do the Driver Pod and Executor Pods fulfill when running Spark on Kubernetes?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Driver Pod orchestrates execution DAGs and requests Executor Pods from the K8s API server for distributed task processing</div>
+            <div class="quiz-option" data-correct="false">B) Driver Pod stores dataset backups while Executor Pods render web UI dashboards</div>
+            <div class="quiz-option" data-correct="false">C) Executor Pods start first and deploy Driver Pods on demand</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. Which JAR libraries are required inside the Docker image for PySpark to communicate with `s3a://` URIs?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) `hadoop-aws` and `aws-java-sdk-bundle`</div>
+            <div class="quiz-option" data-correct="false">B) `spark-sql-kafka` and `jackson-core`</div>
+            <div class="quiz-option" data-correct="false">C) `postgresql-jdbc` and `commons-logging`</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. Why must `minikube image load` be executed for locally built Docker images?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Minikube runs inside a separate container/VM environment with its own isolated Docker daemon</div>
+            <div class="quiz-option" data-correct="false">B) Minikube requires images to be compressed into zip files</div>
+            <div class="quiz-option" data-correct="false">C) To grant root permissions to the Kubernetes node</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">4. What permission does the `spark-sa` Kubernetes ServiceAccount require during `spark-submit`?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) RBAC permissions to create, list, and delete Executor Pods via the K8s API server</div>
+            <div class="quiz-option" data-correct="false">B) Full root SSH access to the host machine</div>
+            <div class="quiz-option" data-correct="false">C) Permission to reboot Minikube nodes</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Check</span>
+              <span class="task-desc">Answer all 4 questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Completion Certificate</h1>
+        <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
+
+        <!-- Locked Card Message (shown when progress < 100%) -->
+        <div class="callout callout-amber" id="certLockMessage">
+          <div class="callout-title">🔒 Certificate Locked</div>
+          <div class="callout-content">
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
+          </div>
+        </div>
+
+        <!-- Unlocked Certificate Container (hidden when locked) -->
+        <div class="cert-canvas-container" id="certUnlockedContainer" style="display: none;">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Name" value="" oninput="generateCertificate()">
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS (lab_structure.md)
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === 5) {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Go to Certificate →';
+      } else if (currentStep === 6) {
+        const containers = document.querySelectorAll('.task-checkbox-container');
+        let checked = 0;
+        containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
+        const pct = (containers.length > 0) ? Math.round((checked / containers.length) * 100) : 0;
+
+        if (pct === 100) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Lab Completed 🎉';
+          generateCertificate();
+        } else {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+
+      const lockMsg = document.getElementById('certLockMessage');
+      const unlockedContainer = document.getElementById('certUnlockedContainer');
+      const lockPercent = document.getElementById('certLockPercent');
+      const certSubtitle = document.getElementById('certSubtitle');
+      const btnNext = document.getElementById('btnNext');
+
+      if (lockPercent) lockPercent.innerText = percentage + '%';
+
+      if (percentage === 100) {
+        if (lockMsg) lockMsg.style.display = 'none';
+        if (unlockedContainer) unlockedContainer.style.display = 'flex';
+        if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
+        if (currentStep === 6) {
+          if (btnNext) {
+            btnNext.disabled = true;
+            btnNext.innerText = 'Lab Completed 🎉';
+          }
+          generateCertificate();
+        }
+      } else {
+        if (lockMsg) lockMsg.style.display = 'block';
+        if (unlockedContainer) unlockedContainer.style.display = 'none';
+        if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
+        if (currentStep === 6 && btnNext) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      }
+    }
+
+    // 5. Quiz Assessment Controller
+    function setupQuizListeners() {
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.addEventListener('click', function() {
+          const parent = this.parentElement;
+          const allSiblings = parent.querySelectorAll('.quiz-option');
+          allSiblings.forEach(s => s.classList.remove('correct', 'incorrect'));
+
+          const isCorrect = this.getAttribute('data-correct') === 'true';
+          if (isCorrect) {
+            this.classList.add('correct');
+          } else {
+            this.classList.add('incorrect');
+          }
+        });
+      });
+    }
+
+    // 6. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // 7. Certificate Generator (Canvas API - Parchment Style)
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const inputVal = document.getElementById('studentNameInput').value.trim();
+      const studentName = inputVal || 'Enter Your Name';
+
+      // 1. Background Fill (Soft Ivory Cream Parchment)
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#fcfbfa');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Outer Dark Navy Border Frame
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+      // 3. Inner Gold Accent Border Frame
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      // 4. Corner Ornaments (Gold Diamonds)
+      const corners = [
+        [34, 34], [canvas.width - 34, 34],
+        [34, canvas.height - 34], [canvas.width - 34, canvas.height - 34]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 5. Main Certificate Title
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b45309';
+      ctx.font = '800 28px "Outfit", sans-serif';
+      ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 105);
+
+      // Subtitle
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.fillText('THIS IS PROUDLY PRESENTED TO', canvas.width / 2, 145);
+
+      // 6. Student Name
+      ctx.fillStyle = inputVal ? '#1e40af' : '#94a3b8';
+      ctx.font = '800 34px "Outfit", sans-serif';
+      ctx.fillText(studentName, canvas.width / 2, 195);
+
+      // Decorative Underline below Name
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2 - 140, 210);
+      ctx.lineTo(canvas.width / 2 + 140, 210);
+      ctx.stroke();
+
+      // 7. Description Text
+      ctx.fillStyle = '#334155';
+      ctx.font = '14px "Inter", sans-serif';
+      ctx.fillText('For successfully deploying Apache Spark applications on Kubernetes (Minikube),', canvas.width / 2, 252);
+      ctx.fillText('orchestrating Driver/Executor Pods, and executing Amazon S3 cloud dataset pipelines.', canvas.width / 2, 274);
+
+      // 8. Official Seal / Badge (Bottom Center)
+      const sealX = canvas.width / 2;
+      const sealY = 385;
+
+      // Outer Gold Seal Ring
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner Purple Ring
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Center Gold Star
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", sans-serif';
+      ctx.fillText('★', sealX, sealY + 7);
+
+      // 9. Date of Issuance (Bottom Left)
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 13px "Inter", sans-serif';
+      ctx.fillText(`Issued: ${today}`, 65, 380);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(65, 405);
+      ctx.lineTo(205, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px "Inter", sans-serif';
+      ctx.fillText('Date of Issuance', 65, 422);
+
+      // 10. Cursive Signature & Title (Bottom Right)
+      ctx.textAlign = 'right';
+      
+      // Small Cursive Signature signed by "Navdeep Kaur"
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '400 26px "Great Vibes", cursive';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 372);
+
+      // Signature Line
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 245, 405);
+      ctx.lineTo(canvas.width - 65, 405);
+      ctx.stroke();
+
+      // Printed Name & Title
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '700 13px "Outfit", sans-serif';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 422);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 11px "Inter", sans-serif';
+      ctx.fillText('Lead Instructor & Principal Architect', canvas.width - 65, 438);
+    }
+
+    // 8. Download Certificate Controller
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const imageURI = canvas.toDataURL("image/png");
+      const studentName = (document.getElementById('studentNameInput').value.trim() || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+      const link = document.createElement('a');
+      link.download = `Spark_on_Minikube_Certificate_${studentName}.png`;
+      link.href = imageURI;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 9. Share Certificate Controller
+    function shareCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      
+      if (navigator.share) {
+        canvas.toBlob(blob => {
+          const file = new File([blob], 'Spark_on_Minikube_Certificate.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Spark on Minikube Certificate',
+            text: 'I just completed the Spark on Minikube training lab!',
+            files: [file]
+          }).catch(err => console.log('Share canceled:', err));
+        });
+      } else {
+        const studentName = document.getElementById('studentNameInput').value.trim() || 'Student';
+        const text = `🏆 I completed the Spark on Minikube training lab! Certificate awarded to: ${studentName}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById('btnShareCert');
+          const orig = btn.innerText;
+          btn.innerText = 'Copied Share Link! 🚀';
+          setTimeout(() => { btn.innerText = orig; }, 2000);
+        }).catch(err => console.error('Share failed:', err));
+      }
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      setupQuizListeners();
+      updateProgress();
+      goToStep(0);
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          if (currentStep === 6) generateCertificate();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

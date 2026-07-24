@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-executor-template
+spec:
+  # Node Affinity tells Kubernetes where to schedule the executor pods
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                  - executor
+  containers:
+    - name: spark-executor
+      image: spark-container-demo:latest # Image will be overridden by spark-submit configuration
