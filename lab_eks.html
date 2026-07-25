@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Provisioning Guide: Amazon EKS & EMR on EKS Training Infrastructure</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR CONTAINER & SYNTAX HIGHLIGHTING --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* VS Code Dark Plus Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* --- VECTOR ARCHITECTURE DIAGRAM --- */
+    .tech-illustration {
+      width: 100%;
+      max-width: 720px;
+      height: auto;
+      margin: 1.5rem 0;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">AWS</div>
+      <div class="brand-title">Client Infrastructure Provisioning Guide: Amazon EKS & EMR on EKS</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Provisioning Steps</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">EKS Cluster & Node Group</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Namespaces (25 Students)</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">IAM Execution Roles & S3</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">EMR Virtual Clusters (25 VCs)</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Student Access & Credentials</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Client Verification Matrix</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OVERVIEW & ARCHITECTURE
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Architecture Requirements</h1>
+        <p class="subtitle">Instruction Manual for Client Cloud Engineering / IT Infrastructure Team.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">📋 Executive Summary</div>
+          <div class="callout-content">
+            <p>This document details the exact AWS infrastructure requirements and automated setup commands necessary to provision a multi-tenant <b>Amazon EKS & EMR on EKS training cluster</b> for <b>25 students</b>. Please execute these steps prior to the start of the training workshop.</p>
+          </div>
+        </div>
+
+        <h2>Environment Specification Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Configuration Requirement</th>
+              <th>Details & Sizing</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>AWS Region</b></td><td>Target Training Region</td><td><code>us-west-2</code> (or client target region)</td></tr>
+            <tr><td><b>Amazon EKS Cluster</b></td><td>Kubernetes v1.28+ with OIDC Provider</td><td>Cluster Name: <code>spark-eks-cluster</code></td></tr>
+            <tr><td><b>Managed Node Group</b></td><td>Instance Type: <code>m5.xlarge</code> (or <code>m6i.xlarge</code>)</td><td>Min: <b>3</b> nodes, Desired: <b>4</b> nodes, Max: <b>8</b> nodes</td></tr>
+            <tr><td><b>Student Isolation</b></td><td>25 Kubernetes Namespaces</td><td><code>student-01</code> to <code>student-25</code></td></tr>
+            <tr><td><b>EMR on EKS</b></td><td>25 Virtual Clusters</td><td>1-to-1 Mapping to student namespaces</td></tr>
+            <tr><td><b>IAM Roles</b></td><td>EMR Job Execution Role</td><td>Trust Service: <code>emr-containers.amazonaws.com</code></td></tr>
+            <tr><td><b>Storage</b></td><td>Amazon S3 Training Bucket</td><td><code>aws-spark-training-data-&lt;ACCOUNT_ID&gt;</code></td></tr>
+            <tr><td><b>Student Access</b></td><td>AWS CLI Credentials</td><td>Standard IAM Keys or AWS SSO Profile: <code>student</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>Multi-Tenant Training Infrastructure Architecture</h2>
+        <svg class="tech-illustration" viewBox="0 0 650 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- AWS Cloud Boundary -->
+          <rect x="10" y="10" width="630" height="260" rx="12" fill="#fafafa" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+          <text x="25" y="32" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#475569">AWS CLOUD (ACCOUNT &amp; REGION)</text>
+
+          <!-- Amazon EKS Cluster -->
+          <rect x="25" y="45" width="410" height="210" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="2" />
+          <text x="35" y="63" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#1e40af">AMAZON EKS CLUSTER (spark-eks-cluster)</text>
+          <text x="35" y="77" font-family="JetBrains Mono, monospace" font-size="8" fill="#2563eb">Managed Node Group: m5.xlarge (Min: 3 | Desired: 4 | Max: 8)</text>
+
+          <!-- Student Namespaces (1..25) -->
+          <rect x="35" y="88" width="180" height="70" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" />
+          <text x="43" y="103" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#0f172a">Namespace: student-01</text>
+          <text x="43" y="118" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">RBAC ServiceAccount: spark</text>
+          <text x="43" y="132" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Pods: Driver &amp; Executors</text>
+
+          <rect x="235" y="88" width="185" height="70" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" />
+          <text x="243" y="103" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#0f172a">Namespace: student-02 ... 25</text>
+          <text x="243" y="118" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">RBAC ServiceAccount: spark</text>
+          <text x="243" y="132" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Pods: Driver &amp; Executors</text>
+
+          <!-- EMR Virtual Clusters (25) -->
+          <rect x="35" y="168" width="385" height="75" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" />
+          <text x="43" y="184" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#1d4ed8">25 EMR ON EKS VIRTUAL CLUSTERS</text>
+          <text x="43" y="198" font-family="JetBrains Mono, monospace" font-size="8" fill="#2563eb">emr-vc-student-01 ➔ Namespace: student-01</text>
+          <text x="43" y="212" font-family="JetBrains Mono, monospace" font-size="8" fill="#2563eb">emr-vc-student-02...25 ➔ Namespace: student-02...25</text>
+
+          <!-- IAM & S3 Bucket -->
+          <rect x="450" y="45" width="175" height="100" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
+          <text x="458" y="63" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#c2410c">IAM EXECUTION ROLE</text>
+          <text x="458" y="78" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#ea580c">EMRContainersJobExecutionRole</text>
+          <text x="458" y="93" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Trust: emr-containers.amazonaws.com</text>
+
+          <rect x="450" y="155" width="175" height="100" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
+          <text x="458" y="173" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#047857">AMAZON S3 BUCKET</text>
+          <text x="458" y="188" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">aws-spark-training-data-&lt;ID&gt;</text>
+          <text x="458" y="203" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Shared Datasets &amp; Job Outputs</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Client Provisioning Plan</span>
+              <span class="task-desc">Verify overall 25-student multi-tenant architecture and cluster resource limits.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): EKS CLUSTER & NODE GROUP
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Provision EKS Cluster & Managed Node Group</h1>
+        <p class="subtitle">Deploying Amazon EKS with auto-scaling m5.xlarge managed nodes and OIDC enabled.</p>
+
+        <h2>1. EKS Cluster Definition Manifest (`eks_cluster.yaml`)</h2>
+        <p>Save the following YAML configuration file as <code>eks_cluster.yaml</code> on your administrative machine:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest (eks_cluster.yaml)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">eksctl.io/v1alpha5</span>
+<span class="token-keyword">kind</span>: <span class="token-string">ClusterConfig</span>
+
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">spark-eks-cluster</span>
+  <span class="token-keyword">region</span>: <span class="token-string">us-west-2</span>
+  <span class="token-keyword">version</span>: <span class="token-string">"1.28"</span>
+
+<span class="token-keyword">iam</span>:
+  <span class="token-keyword">withOIDC</span>: <span class="token-keyword">true</span>  <span class="token-comment"># REQUIRED for IRSA and EMR on EKS Virtual Cluster bindings</span>
+
+<span class="token-keyword">managedNodeGroups</span>:
+  - <span class="token-keyword">name</span>: <span class="token-string">m5-xlarge-workers</span>
+    <span class="token-keyword">instanceType</span>: <span class="token-string">m5.xlarge</span>  <span class="token-comment"># 4 vCPUs, 16 GB RAM per node (or m6i.xlarge)</span>
+    <span class="token-keyword">minSize</span>: <span class="token-number">3</span>              <span class="token-comment"># Minimum node capacity</span>
+    <span class="token-keyword">desiredCapacity</span>: <span class="token-number">4</span>      <span class="token-comment"># Initial training capacity</span>
+    <span class="token-keyword">maxSize</span>: <span class="token-number">8</span>              <span class="token-comment"># Auto-scale up to 8 nodes during peak loads</span>
+    <span class="token-keyword">volumeSize</span>: <span class="token-number">100</span>          <span class="token-comment"># 100 GB root EBS volume</span>
+    <span class="token-keyword">volumeType</span>: <span class="token-string">gp3</span>
+    <span class="token-keyword">privateNetworking</span>: <span class="token-keyword">true</span>
+    <span class="token-keyword">labels</span>:
+      <span class="token-keyword">role</span>: <span class="token-string">spark-worker</span>
+    <span class="token-keyword">tags</span>:
+      <span class="token-keyword">Environment</span>: <span class="token-string">Training</span>
+      <span class="token-keyword">Project</span>: <span class="token-string">AWS-Data-Engineering-Lab</span></code></pre>
+        </div>
+
+        <h2>2. Deploy EKS Cluster via `eksctl`</h2>
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Deployment Duration Note</div>
+          <div class="callout-content">
+            <p>EKS cluster provisioning via <code>eksctl</code> takes approximately <b>15 to 20 minutes</b>. Ensure your administrative AWS CLI session remains active.</p>
+          </div>
+        </div>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># 1. Provision cluster</span>
+<span class="token-keyword">eksctl</span> <span class="token-function">create cluster</span> -f <span class="token-string">eks_cluster.yaml</span>
+
+<span class="token-comment"># 2. Verify worker nodes online & status ACTIVE</span>
+<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">describe-cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --query <span class="token-string">"cluster.status"</span> --output <span class="token-string">text</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span> -o wide</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Provision EKS Cluster & Verify Node Group</span>
+              <span class="task-desc">Deploy EKS cluster with m5.xlarge managed nodes (3-8 auto-scaling) and OIDC provider enabled.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): NAMESPACES (25 STUDENTS)
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Create 25 Student Namespaces & RBAC</h1>
+        <p class="subtitle">Automated provisioning of 25 isolated Kubernetes namespaces (student-01 to student-25).</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🐧 Linux / macOS (Bash)</button>
+        </div>
+
+        <h2>Automated Script: Provision 25 Namespaces & ServiceAccounts</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell Script</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Create 25 Kubernetes student namespaces and apply Spark ServiceAccounts</span>
+<span class="token-keyword">1..25</span> | <span class="token-keyword">ForEach-Object</span> {
+    <span class="token-variable">$i</span> = <span class="token-string">"{0:D2}"</span> -f <span class="token-variable">$_</span>
+    <span class="token-variable">$ns</span> = <span class="token-string">"student-$i"</span>
+    <span class="token-keyword">Write-Host</span> <span class="token-string">"Creating Namespace and RBAC for $ns..."</span> -ForegroundColor <span class="token-string">Green</span>
+    
+    <span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-variable">$ns</span> --dry-run=<span class="token-string">client</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+    
+    <span class="token-comment"># Apply ServiceAccount and RBAC RoleBinding inside namespace</span>
+    <span class="token-variable">$rbacYaml</span> = <span class="token-string">@"
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark
+  namespace: $ns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark-role
+  namespace: $ns
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+    verbs: ["create", "get", "list", "watch", "delete", "deletecollection", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark-role-binding
+  namespace: $ns
+subjects:
+  - kind: ServiceAccount
+    name: spark
+    namespace: $ns
+roleRef:
+  kind: Role
+  name: spark-role
+  apiGroup: rbac.authorization.k8s.io
+"@</span>
+    <span class="token-variable">$rbacYaml</span> | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash Script</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment">#!/bin/bash</span>
+<span class="token-comment"># Create 25 Kubernetes student namespaces and apply Spark ServiceAccounts</span>
+<span class="token-keyword">for</span> i <span class="token-keyword">in</span> $(seq -w 1 25); <span class="token-keyword">do</span>
+  ns=<span class="token-string">"student-${i}"</span>
+  <span class="token-keyword">echo</span> <span class="token-string">"Creating Namespace and RBAC for ${ns}..."</span>
+  <span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-variable">${ns}</span> --dry-run=<span class="token-string">client</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+  
+  <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f - &lt;&lt;EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark
+  namespace: ${ns}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark-role
+  namespace: ${ns}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+    verbs: ["create", "get", "list", "watch", "delete", "deletecollection", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark-role-binding
+  namespace: ${ns}
+subjects:
+  - kind: ServiceAccount
+    name: spark
+    namespace: ${ns}
+roleRef:
+  kind: Role
+  name: spark-role
+  apiGroup: rbac.authorization.k8s.io
+EOF
+<span class="token-keyword">done</span></code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Provision 25 Student Namespaces</span>
+              <span class="task-desc">Run automated script to create student-01 through student-25 namespaces with spark ServiceAccount & RBAC.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): IAM EXECUTION ROLES & S3
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: IAM Execution Roles & S3 Storage</h1>
+        <p class="subtitle">Creating EMR Containers Job Execution Role and S3 Training Data Storage.</p>
+
+        <h2>1. Create S3 Bucket for Training Materials & Job Outputs</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Create unique S3 bucket for training materials</span>
+<span class="token-keyword">AWS_ACCOUNT_ID</span>=$(aws sts get-caller-identity --query Account --output text)
+<span class="token-keyword">BUCKET_NAME</span>=<span class="token-string">"aws-spark-training-data-${AWS_ACCOUNT_ID}"</span>
+
+<span class="token-keyword">aws</span> <span class="token-variable">s3api</span> <span class="token-function">create-bucket</span> --bucket <span class="token-variable">$BUCKET_NAME</span> --region <span class="token-string">us-west-2</span> --create-bucket-configuration <span class="token-string">LocationConstraint=us-west-2</span>
+<span class="token-keyword">echo</span> <span class="token-string">"Created Training S3 Bucket: s3://$BUCKET_NAME"</span></code></pre>
+        </div>
+
+        <h2>2. Create EMR on EKS Job Execution IAM Role</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># 1. Generate trust policy for EMR on EKS containers service</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF &gt; trust-policy.json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "emr-containers.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+<span class="token-comment"># 2. Create IAM Role</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">create-role</span> --role-name <span class="token-string">EMRContainersJobExecutionRole</span> --assume-role-policy-document <span class="token-string">file://trust-policy.json</span>
+
+<span class="token-comment"># 3. Attach S3 access and CloudWatch logs policies</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">attach-role-policy</span> --role-name <span class="token-string">EMRContainersJobExecutionRole</span> --policy-arn <span class="token-string">arn:aws:iam::aws:policy/AmazonS3FullAccess</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">attach-role-policy</span> --role-name <span class="token-string">EMRContainersJobExecutionRole</span> --policy-arn <span class="token-string">arn:aws:iam::aws:policy/CloudWatchLogsFullAccess</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Provision S3 Storage & IAM Execution Role</span>
+              <span class="task-desc">Create S3 training bucket and `EMRContainersJobExecutionRole` with emr-containers.amazonaws.com trust policy.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): EMR VIRTUAL CLUSTERS (25 VCs)
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Create 25 EMR Virtual Clusters</h1>
+        <p class="subtitle">Mapping one EMR on EKS Virtual Cluster to each student namespace (25 total VCs).</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🐧 Linux / macOS (Bash)</button>
+        </div>
+
+        <h2>Automated Script: Create 25 Virtual Clusters</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell Script</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Create 25 EMR on EKS Virtual Clusters mapped to student-01..25 namespaces</span>
+<span class="token-keyword">1..25</span> | <span class="token-keyword">ForEach-Object</span> {
+    <span class="token-variable">$i</span> = <span class="token-string">"{0:D2}"</span> -f <span class="token-variable">$_</span>
+    <span class="token-variable">$ns</span> = <span class="token-string">"student-$i"</span>
+    <span class="token-variable">$vcName</span> = <span class="token-string">"emr-vc-$ns"</span>
+    <span class="token-keyword">Write-Host</span> <span class="token-string">"Creating EMR Virtual Cluster $vcName for namespace $ns..."</span> -ForegroundColor <span class="token-string">Cyan</span>
+    
+    <span class="token-variable">$containerProvider</span> = <span class="token-string">"{`"id`": `"spark-eks-cluster`", `"type`": `"EKS`", `"info`": {`"eksInfo`": {`"namespace`": `"$ns`"}}}"</span>
+    
+    <span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">create-virtual-cluster</span> `
+      --name <span class="token-variable">$vcName</span> `
+      --container-provider <span class="token-variable">$containerProvider</span> `
+      --region <span class="token-string">us-west-2</span>
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash Script</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment">#!/bin/bash</span>
+<span class="token-comment"># Create 25 EMR on EKS Virtual Clusters mapped to student-01..25 namespaces</span>
+<span class="token-keyword">for</span> i <span class="token-keyword">in</span> $(seq -w 1 25 2&gt;/dev/null || printf <span class="token-string">"%02d\n"</span> {1..25}); <span class="token-keyword">do</span>
+  ns=<span class="token-string">"student-${i}"</span>
+  vcName=<span class="token-string">"emr-vc-${ns}"</span>
+  <span class="token-keyword">echo</span> <span class="token-string">"Creating EMR Virtual Cluster ${vcName} for namespace ${ns}..."</span>
+  
+  providerJson=$(printf <span class="token-string">'{"id": "spark-eks-cluster", "type": "EKS", "info": {"eksInfo": {"namespace": "%s"}}}'</span> <span class="token-string">"${ns}"</span>)
+  
+  <span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">create-virtual-cluster</span> \
+    --name <span class="token-string">"${vcName}"</span> \
+    --container-provider <span class="token-string">"${providerJson}"</span> \
+    --region <span class="token-string">us-west-2</span>
+<span class="token-keyword">done</span></code></pre>
+          </div>
+        </div>
+
+        <h2>Verify Active EMR Virtual Clusters</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># List all virtual clusters and confirm RUNNING status</span>
+<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">list-virtual-clusters</span> --region <span class="token-string">us-west-2</span> --query <span class="token-string">"virtualClusters[*].[name, id, state]"</span> --output <span class="token-string">table</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Provision 25 EMR Virtual Clusters</span>
+              <span class="task-desc">Execute script to bind 25 EMR Virtual Clusters to student-01 through student-25 namespaces.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): STUDENT ACCESS & CREDENTIALS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Student Access & Credential Provisioning</h1>
+        <p class="subtitle">Distributing AWS CLI access (Standard IAM Access Keys vs AWS SSO) and EKS kubeconfig.</p>
+
+        <h2>Option A: Standard IAM User Credentials</h2>
+        <p>If providing IAM Users to students, assign policies <code>AmazonEKSClusterPolicy</code>, <code>AmazonEC2ContainerRegistryPowerUser</code>, and <code>AmazonS3FullAccess</code>. Students will run:</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Student CLI Command</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span>
+<span class="token-comment"># Prompts for student Access Key ID and Secret Access Key</span>
+
+<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span></code></pre>
+        </div>
+
+        <h2>Option B: AWS SSO / IAM Identity Center (Profile: `student`)</h2>
+        <p>If using AWS SSO / Identity Center, configure student SSO start URL and role name:</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Student CLI Command</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Student configures SSO session</span>
+<span class="token-keyword">aws</span> <span class="token-function">configure sso</span> --profile <span class="token-string">student</span>
+
+<span class="token-comment"># Authenticate & export profile</span>
+<span class="token-keyword">aws</span> <span class="token-variable">sso</span> <span class="token-function">login</span> --profile <span class="token-string">student</span>
+<span class="token-keyword">export</span> <span class="token-variable">AWS_PROFILE</span>=<span class="token-string">student</span>  <span class="token-comment"># (or $env:AWS_PROFILE="student" in PowerShell)</span>
+
+<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span></code></pre>
+        </div>
+
+        <h2>Student Assignment Sheet Template</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Assigned Namespace</th>
+              <th>Assigned EMR Virtual Cluster ID</th>
+              <th>S3 Data Path</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Student 01</b></td><td><code>student-01</code></td><td><code>&lt;VIRTUAL_CLUSTER_ID_01&gt;</code></td><td><code>s3://aws-spark-training-data-&lt;ID&gt;/student-01/</code></td></tr>
+            <tr><td><b>Student 02</b></td><td><code>student-02</code></td><td><code>&lt;VIRTUAL_CLUSTER_ID_02&gt;</code></td><td><code>s3://aws-spark-training-data-&lt;ID&gt;/student-02/</code></td></tr>
+            <tr><td><b>Student 03...25</b></td><td><code>student-03...25</code></td><td><code>&lt;VIRTUAL_CLUSTER_ID_03...25&gt;</code></td><td><code>s3://aws-spark-training-data-&lt;ID&gt;/student-03...25/</code></td></tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Prepare Student Credentials & Assignment Sheet</span>
+              <span class="task-desc">Generate 25 student credential pairs/SSO profiles and record Virtual Cluster IDs.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): CLIENT VERIFICATION MATRIX
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Client Infrastructure Verification Matrix</h1>
+        <p class="subtitle">Final client verification commands to validate training readiness before class.</p>
+
+        <h2>Infrastructure Audit Verification Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Category</th>
+              <th>Verification Command</th>
+              <th>Expected Active State</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>EKS Cluster Status</b></td><td><code>aws eks describe-cluster --name spark-eks-cluster --query "cluster.status"</code></td><td><code>"ACTIVE"</code></td></tr>
+            <tr><td><b>Node Group Capacity</b></td><td><code>kubectl get nodes</code></td><td><b>4 nodes</b> (m5.xlarge) Ready</td></tr>
+            <tr><td><b>OIDC Provider</b></td><td><code>aws eks describe-cluster --name spark-eks-cluster --query "cluster.identity.oidc.issuer"</code></td><td>Valid HTTPS OIDC Issuer URL</td></tr>
+            <tr><td><b>Student Namespaces</b></td><td><code>kubectl get namespaces | grep student-</code></td><td><b>25 namespaces</b> (student-01..25) Active</td></tr>
+            <tr><td><b>EMR Virtual Clusters</b></td><td><code>aws emr-containers list-virtual-clusters</code></td><td><b>25 Virtual Clusters</b> in <code>RUNNING</code> state</td></tr>
+            <tr><td><b>IAM Execution Role</b></td><td><code>aws iam get-role --role-name EMRContainersJobExecutionRole</code></td><td>Role exists with S3/CloudWatch policy</td></tr>
+            <tr><td><b>Training S3 Bucket</b></td><td><code>aws s3 ls</code></td><td>Bucket <code>aws-spark-training-data-&lt;ID&gt;</code> accessible</td></tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Pre-Workshop Verification</span>
+              <span class="task-desc">Confirm all 7 infrastructure checks pass and notify lead instructor that cluster is ready.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Client Infrastructure Provisioning Manual. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS (lab_structure.md)
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === totalStepsCount - 1) {
+        btnNext.disabled = true;
+        btnNext.innerText = 'Infrastructure Ready 🎉';
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+    }
+
+    // 5. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      updateProgress();
+      goToStep(0);
+    });
+  </script>
+</body>
+</html>

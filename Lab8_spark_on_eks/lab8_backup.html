@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lab 8: Deploy Spark Workloads on Pre-Provisioned Amazon EKS & ECR</title>
+  <title>Lab 8: Containerize, Push, and Deploy Spark on Amazon EKS</title>
   
   <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -788,7 +788,7 @@
   <header class="navbar">
     <div class="brand">
       <div class="brand-logo">8</div>
-      <div class="brand-title">Lab 8: Deploy Spark Workloads on Pre-Provisioned Amazon EKS & ECR</div>
+      <div class="brand-title">Lab 8: Containerize, Push, and Deploy Spark on Amazon EKS</div>
     </div>
     <div class="nav-actions">
       <div class="progress-bar-container">
@@ -811,7 +811,7 @@
         </li>
         <li class="step-item" onclick="goToStep(1)">
           <span class="step-number">2</span>
-          <span class="step-title">AWS CLI & Connect to EKS</span>
+          <span class="step-title">AWS CLI & IAM Roles</span>
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
@@ -819,11 +819,11 @@
         </li>
         <li class="step-item" onclick="goToStep(3)">
           <span class="step-number">4</span>
-          <span class="step-title">Authenticate & Push to ECR</span>
+          <span class="step-title">Push Image to Amazon ECR</span>
         </li>
         <li class="step-item" onclick="goToStep(4)">
           <span class="step-number">5</span>
-          <span class="step-title">Apply RBAC & Namespace</span>
+          <span class="step-title">Provision EKS & RBAC</span>
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
@@ -848,149 +848,156 @@
            ==================================================================== -->
       <section class="content-panel active" id="panel-0">
         <h1>Module 1: Overview & Prerequisites</h1>
-        <p class="subtitle">Deploying PySpark Workloads on Pre-Existing Amazon EKS & Elastic Container Registry (ECR).</p>
+        <p class="subtitle">Production Elastic Container Registry & Amazon EKS Spark Orchestration.</p>
 
-        <div class="callout callout-amber">
-          <div class="callout-title">💡 Pre-Provisioned AWS Infrastructure</div>
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Learning Objective</div>
           <div class="callout-content">
-            <p>Your <b>Amazon EKS cluster</b> and <b>Amazon ECR repository</b> are pre-created by your instructor. You will connect to the existing cluster via <code>aws eks update-kubeconfig</code> and publish images to your designated ECR repository URL—no cluster creation (<code>eksctl create cluster</code>) required!</p>
+            <p>Containerize a PySpark application, publish the Docker image to Amazon Elastic Container Registry (ECR), provision an Amazon EKS Kubernetes cluster via `eksctl`, configure ServiceAccount RBAC permissions, and submit production Spark jobs directly to EKS nodes while integrating with Amazon S3 cloud storage.</p>
           </div>
         </div>
 
         <h2>Architectural Workflow & Environment Map</h2>
-        <!-- High-Contrast Vector Diagram for Existing EKS & ECR Architecture -->
+        <!-- High-Contrast Vector EKS Architecture Diagram -->
         <svg class="tech-illustration" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
           <line x1="20" y1="0" x2="20" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="120" y1="0" x2="120" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="220" y1="0" x2="220" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="320" y1="0" x2="320" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
 
-          <!-- Student Workstation -->
-          <rect x="15" y="35" width="115" height="180" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
-          <text x="23" y="53" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">STUDENT WORKSTATION</text>
-          <text x="23" y="68" font-family="JetBrains Mono, monospace" font-size="7" fill="#7c3aed">PySpark App &amp; Data</text>
+          <!-- Local Workstation -->
+          <rect x="15" y="35" width="105" height="85" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <rect x="15" y="35" width="105" height="20" rx="8" fill="#f1f5f9" />
+          <text x="23" y="47" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">LOCAL WORKSTATION</text>
+          <text x="23" y="70" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">docker build</text>
+          <text x="23" y="85" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#ea580c">docker push</text>
 
-          <rect x="23" y="80" width="98" height="35" rx="4" fill="rgba(124, 58, 237, 0.1)" stroke="#7c3aed" stroke-width="1" />
-          <text x="28" y="96" font-family="JetBrains Mono, monospace" font-size="7" font-weight="600" fill="#7c3aed">docker build</text>
-          <text x="28" y="107" font-family="Inter, sans-serif" font-size="6.5" fill="#475569">--platform linux/amd64</text>
+          <!-- Amazon ECR Registry -->
+          <rect x="150" y="35" width="95" height="85" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
+          <text x="158" y="53" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#c2410c">AMAZON ECR</text>
+          <rect x="158" y="65" width="80" height="40" rx="4" fill="#ea580c" />
+          <text x="163" y="82" font-family="JetBrains Mono, monospace" font-size="7" font-weight="700" fill="#ffffff">spark-on-eks</text>
+          <text x="163" y="95" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#ffedd5">:latest</text>
 
-          <rect x="23" y="125" width="98" height="35" rx="4" fill="rgba(37, 99, 235, 0.1)" stroke="#2563eb" stroke-width="1" />
-          <text x="28" y="141" font-family="JetBrains Mono, monospace" font-size="7" font-weight="600" fill="#2563eb">spark-submit</text>
-          <text x="28" y="152" font-family="Inter, sans-serif" font-size="6.5" fill="#475569">master: k8s://api</text>
+          <!-- Arrow: Local -> ECR -->
+          <path d="M120 75 H150" stroke="#ea580c" stroke-width="2.5" stroke-dasharray="4 2" />
+          <path d="M146 71 L153 75 L146 79 Z" fill="#ea580c" />
 
-          <!-- Amazon ECR Registry (Existing) -->
-          <rect x="155" y="35" width="105" height="85" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
-          <text x="163" y="51" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#c2410c">PRE-EXISTING ECR</text>
-          <text x="163" y="64" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#ea580c">spark-on-eks:latest</text>
-          <text x="163" y="100" font-family="Inter, sans-serif" font-size="6.5" fill="#9a3412">📦 Image Push Destination</text>
+          <!-- Amazon EKS Cluster -->
+          <rect x="270" y="35" width="115" height="190" rx="8" fill="#0f172a" stroke="#94a3b8" stroke-width="2" />
+          <text x="280" y="53" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#ffffff">AMAZON EKS</text>
 
-          <!-- Amazon EKS Cluster (Existing) -->
-          <rect x="155" y="130" width="230" height="85" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
-          <text x="163" y="146" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#047857">PRE-EXISTING AMAZON EKS CLUSTER</text>
-          <text x="163" y="159" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#059669">Kubernetes API Master Endpoint</text>
+          <!-- Arrow: ECR -> EKS Image Pull -->
+          <path d="M245 75 H270" stroke="#2563eb" stroke-width="2.5" />
+          <path d="M266 71 L273 75 L266 79 Z" fill="#2563eb" />
 
-          <rect x="163" y="168" width="95" height="38" rx="4" fill="#059669" />
-          <text x="168" y="182" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#ffffff">spark-driver</text>
-          <text x="168" y="195" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#d1fae5">Pod: Running</text>
+          <!-- EKS Driver & Executor Pods -->
+          <rect x="280" y="68" width="95" height="45" rx="4" fill="rgba(37, 99, 235, 0.2)" stroke="#2563eb" stroke-width="1" />
+          <text x="286" y="83" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#60a5fa">spark-driver</text>
+          <text x="286" y="97" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">m5.large node</text>
 
-          <rect x="268" y="168" width="105" height="38" rx="4" fill="#059669" />
-          <text x="273" y="182" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#ffffff">spark-executor 1/2</text>
-          <text x="273" y="195" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#d1fae5">Pods: Running</text>
+          <rect x="280" y="125" width="95" height="45" rx="4" fill="rgba(5, 150, 105, 0.2)" stroke="#059669" stroke-width="1" />
+          <text x="286" y="140" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#34d399">spark-exec-1</text>
+          <text x="286" y="154" font-family="JetBrains Mono, monospace" font-size="7" fill="#94a3b8">m5.large node</text>
+
+          <!-- Amazon S3 Storage -->
+          <rect x="15" y="150" width="230" height="75" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <text x="25" y="168" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#475569">AMAZON S3 BUCKET (s3a://)</text>
+          <text x="25" y="188" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">CSV Datasets &amp; Parquet Write Outputs</text>
+
+          <!-- Arrow: EKS -> S3 -->
+          <path d="M280 190 H245" stroke="#059669" stroke-width="2.5" stroke-dasharray="4 2" />
+          <path d="M249 186 L242 190 L249 194 Z" fill="#059669" />
         </svg>
+
+        <h2>Prerequisites Checklist</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>Purpose</th>
+              <th>Verification Command</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AWS CLI v2</code></td>
+              <td>Authenticate & manage AWS cloud resources</td>
+              <td><code>aws sts get-caller-identity</code></td>
+            </tr>
+            <tr>
+              <td><code>Docker Desktop</code></td>
+              <td>Build & run container images</td>
+              <td><code>docker --version</code></td>
+            </tr>
+            <tr>
+              <td><code>kubectl</code></td>
+              <td>Manage Kubernetes EKS cluster workloads</td>
+              <td><code>kubectl version --client</code></td>
+            </tr>
+            <tr>
+              <td><code>eksctl</code></td>
+              <td>CLI tool for provisioning EKS clusters</td>
+              <td><code>eksctl version</code></td>
+            </tr>
+            <tr>
+              <td><code>Java (OpenJDK 17)</code></td>
+              <td>Required locally to launch client-side <code>spark-submit</code></td>
+              <td><code>java -version</code></td>
+            </tr>
+          </tbody>
+        </table>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t0_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Review Pre-Provisioned Architecture</span>
-              <span class="task-desc">Understand how local workstation Docker images push to pre-existing ECR and execute on pre-existing EKS clusters.</span>
+              <span class="task-label">Verify Prerequisites & Architecture</span>
+              <span class="task-desc">Confirm AWS CLI v2, Docker Desktop, kubectl, eksctl, and OpenJDK 17 installation.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 2 (PANEL 1): AWS CLI & CONNECT TO EKS
+           MODULE 2 (PANEL 1): AWS CLI & IAM ROLES
            ==================================================================== -->
       <section class="content-panel" id="panel-1">
-        <h1>Module 2: AWS CLI & Connect to EKS</h1>
-        <p class="subtitle">Authenticating AWS CLI credentials and connecting kubectl to the pre-existing EKS cluster.</p>
+        <h1>Module 2: AWS CLI & IAM Roles</h1>
+        <p class="subtitle">Configuring AWS credentials and verifying required IAM policies.</p>
 
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <h2>1. Configure AWS CLI Credentials</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span>
-
-<span class="token-comment"># Prompts:</span>
-<span class="token-comment"># AWS Access Key ID [****************]: &lt;YOUR_ACCESS_KEY_ID&gt;</span>
-<span class="token-comment"># AWS Secret Access Key [****************]: &lt;YOUR_SECRET_ACCESS_KEY&gt;</span>
-<span class="token-comment"># Default region name [us-west-2]: us-west-2</span>
-<span class="token-comment"># Default output format [json]: json</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span>
-
-<span class="token-comment"># Prompts:</span>
-<span class="token-comment"># AWS Access Key ID [****************]: &lt;YOUR_ACCESS_KEY_ID&gt;</span>
-<span class="token-comment"># AWS Secret Access Key [****************]: &lt;YOUR_SECRET_ACCESS_KEY&gt;</span>
-<span class="token-comment"># Default region name [us-west-2]: us-west-2</span>
-<span class="token-comment"># Default output format [json]: json</span></code></pre>
-          </div>
-        </div>
-
-        <h2>2. Connect kubectl to Existing EKS Cluster & Check Cluster Status</h2>
-        <p>Update your local kubeconfig file to connect to the pre-existing EKS cluster provided by your instructor and verify its active status:</p>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Connect local kubectl to pre-existing EKS cluster</span>
-<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span>
-
-<span class="token-comment"># 2. Check EKS Cluster lifecycle status (Expected output: ACTIVE)</span>
-<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">describe-cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --query <span class="token-string">"cluster.status"</span> --output <span class="token-string">text</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Connect local kubectl to pre-existing EKS cluster</span>
-<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span>
-
-<span class="token-comment"># 2. Check EKS Cluster lifecycle status (Expected output: ACTIVE)</span>
-<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">describe-cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --query <span class="token-string">"cluster.status"</span> --output <span class="token-string">text</span></code></pre>
-          </div>
-        </div>
-
-        <h2>3. Verify Cluster Master & Node Connectivity</h2>
+        <h2>1. Configure AWS CLI</h2>
         <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-comment"># Verify Kubernetes Control Plane endpoints</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">cluster-info</span>
+          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-function">configure</span>
 
-<span class="token-comment"># Verify active worker node status & IP addresses</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span> -o <span class="token-string">wide</span></code></pre>
+<span class="token-comment"># Prompts:</span>
+<span class="token-comment"># AWS Access Key ID [****************]: &lt;YOUR_ACCESS_KEY_ID&gt;</span>
+<span class="token-comment"># AWS Secret Access Key [****************]: &lt;YOUR_SECRET_ACCESS_KEY&gt;</span>
+<span class="token-comment"># Default region name [us-west-2]: us-west-2</span>
+<span class="token-comment"># Default output format [json]: json</span></code></pre>
+        </div>
+
+        <h2>2. Required IAM Policy Permissions</h2>
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Required IAM User Permissions</div>
+          <div class="callout-content">
+            <p>Ensure your AWS IAM User has the following policy attachments before creating resources:</p>
+            <ul class="bullet-list" style="margin-top: 0.5rem; margin-bottom: 0;">
+              <td><code>AmazonEKSClusterPolicy</code> & <code>AmazonEKSWorkerNodePolicy</code> (Full cluster provisioning)</td>
+              <td><code>AmazonEC2ContainerRegistryPowerUser</code> (ECR registry create/push)</td>
+              <td><code>AmazonS3FullAccess</code> (S3 dataset creation and read/write)</td>
+              <td><code>IAM Full Access</code> (Required by <code>eksctl</code> for Service Account OIDC creation)</td>
+            </ul>
+          </div>
         </div>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t1_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Configure AWS CLI & Update Kubeconfig</span>
-              <span class="task-desc">Run `aws configure`, update kubeconfig with `aws eks update-kubeconfig`, and verify worker nodes with `kubectl get nodes`.</span>
+              <span class="task-label">Configure AWS Credentials & Policies</span>
+              <span class="task-desc">Run `aws configure` and verify identity with `aws sts get-caller-identity`.</span>
             </div>
           </li>
         </ul>
@@ -1004,7 +1011,7 @@
         <p class="subtitle">Building multi-platform x86_64 Docker images for Intel EKS nodes.</p>
 
         <div class="callout callout-blue">
-          <div class="callout-title">💡 Apple Silicon (M1/M2/M3/M4) Note</div>
+          <div class="callout-title">💡 Apple Silicon (M1/M2/M3) Note</div>
           <div class="callout-content">
             <p>EKS worker nodes run on Intel <code>m5.large</code> (x86_64) architecture. You <b>MUST</b> include <code>--platform linux/amd64</code> during Docker build to prevent container execution crashes on EKS!</p>
           </div>
@@ -1059,11 +1066,11 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 4 (PANEL 3): AUTHENTICATE & PUSH TO ECR
+           MODULE 4 (PANEL 3): PUSH IMAGE TO AMAZON ECR
            ==================================================================== -->
       <section class="content-panel" id="panel-3">
-        <h1>Module 4: Authenticate & Push to ECR</h1>
-        <p class="subtitle">Publishing container images to the pre-existing Amazon ECR repository.</p>
+        <h1>Module 4: Push Image to Amazon ECR</h1>
+        <p class="subtitle">Publishing container images to Amazon Elastic Container Registry.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -1071,7 +1078,7 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>1. Configure ECR Environment Variables</h2>
+        <h2>1. Configure Environment Variables</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
@@ -1093,23 +1100,25 @@
           </div>
         </div>
 
-        <h2>2. Authenticate Docker with Amazon ECR</h2>
+        <h2>2. Create ECR Repository & Authenticate</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$env:AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$env:REGISTRY_URL</span></code></pre>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">create-repository</span> --repository-name <span class="token-string">spark-on-eks</span> --region <span class="token-variable">$env:AWS_REGION</span>
+<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$env:AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$env:REGISTRY_URL</span></code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$REGISTRY_URL</span></code></pre>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">create-repository</span> --repository-name <span class="token-string">spark-on-eks</span> --region <span class="token-variable">$AWS_REGION</span>
+<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$REGISTRY_URL</span></code></pre>
           </div>
         </div>
 
-        <h2>3. Tag & Push Image to Existing ECR Repository</h2>
+        <h2>3. Tag and Push Image to ECR</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
@@ -1131,25 +1140,35 @@
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Authenticate & Push to ECR</span>
-              <span class="task-desc">Authenticate Docker CLI with Amazon ECR, tag image, and push container to pre-existing ECR repository.</span>
+              <span class="task-label">Push Image to ECR</span>
+              <span class="task-desc">Create ECR repository, authenticate Docker login, tag image, and push to Amazon ECR.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 5 (PANEL 4): APPLY RBAC & NAMESPACE
+           MODULE 5 (PANEL 4): PROVISION EKS & RBAC
            ==================================================================== -->
       <section class="content-panel" id="panel-4">
-        <h1>Module 5: Apply RBAC & Namespace</h1>
-        <p class="subtitle">Configuring Kubernetes RBAC permissions and session environment variables.</p>
+        <h1>Module 5: Provision EKS & RBAC</h1>
+        <p class="subtitle">Provisioning production Kubernetes cluster nodes with eksctl and RBAC.</p>
 
-        <h2>1. Environment Variable Cleanup</h2>
+        <h2>1. Provision Amazon EKS Cluster (`eks/eks_cluster.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">eksctl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Provision cluster (takes ~15-20 minutes)</span>
+<span class="token-keyword">eksctl</span> <span class="token-function">create</span> <span class="token-variable">cluster</span> -f <span class="token-string">eks/eks_cluster.yaml</span>
+
+<span class="token-comment"># Verify EKS worker nodes online</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span></code></pre>
+        </div>
+
+        <h2>2. Local Session Fixes (PYSPARK_PYTHON & JDK 17)</h2>
         <div class="callout callout-amber">
-          <div class="callout-title">⚠️ Local Session Fixes</div>
+          <div class="callout-title">⚠️ Environment Variable Cleanup</div>
           <div class="callout-content">
-            <p>Ensure local terminal environment variables do not override cluster container Python executables:</p>
+            <p>Ensure local terminal environment variables do not override cluster Python executables:</p>
             <div class="code-block-container" style="margin-top: 0.5rem; margin-bottom: 0;">
               <pre class="code-content"><code><span class="token-keyword">unset</span> <span class="token-variable">PYSPARK_PYTHON</span>
 <span class="token-keyword">unset</span> <span class="token-variable">PYSPARK_DRIVER_PYTHON</span></code></pre>
@@ -1157,8 +1176,7 @@
           </div>
         </div>
 
-        <h2>2. Apply Kubernetes RBAC Permissions (`eks/spark-rbac.yaml`)</h2>
-        <p>Apply the ServiceAccount and RoleBinding required for Spark Driver to create Executor pods:</p>
+        <h2>3. Apply Kubernetes RBAC Permissions (`eks/spark-rbac.yaml`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">eks/spark-rbac.yaml</span></code></pre>
@@ -1168,8 +1186,8 @@
           <li class="task-checkbox-container" data-task-id="t4_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Apply RBAC Permissions</span>
-              <span class="task-desc">Clean environment variables and apply `spark-rbac.yaml` to grant Spark Driver pod permissions.</span>
+              <span class="task-label">Provision Cluster & Apply RBAC</span>
+              <span class="task-desc">Deploy cluster using `eksctl`, clean environment variables, and apply `spark-rbac.yaml`.</span>
             </div>
           </li>
         </ul>
@@ -1180,7 +1198,7 @@
            ==================================================================== -->
       <section class="content-panel" id="panel-5">
         <h1>Module 6: Submit & Monitor EKS Job</h1>
-        <p class="subtitle">Extracting cluster API master endpoint and submitting cluster mode Spark jobs.</p>
+        <p class="subtitle">Extracting cluster API master endpoint and submitting cluster mode jobs.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -1188,43 +1206,13 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>1. Verify & Configure Local Spark Environment</h2>
-        <p>Before submitting, ensure <code>SPARK_HOME</code> and <code>PATH</code> are set properly to invoke standalone Spark binaries:</p>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Set SPARK_HOME and prepend Spark bin directory to PATH</span>
-<span class="token-variable">$env:SPARK_HOME</span> = <span class="token-string">"C:\Tools\spark-3.5.1-bin-hadoop3"</span>
-<span class="token-variable">$env:PATH</span> = <span class="token-string">"$env:SPARK_HOME\bin;$env:PATH"</span>
-
-<span class="token-comment"># 2. Verify spark-submit.cmd binary is accessible</span>
-<span class="token-keyword">spark-submit.cmd</span> --version</code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Set SPARK_HOME and prepend Spark bin directory to PATH</span>
-<span class="token-keyword">export</span> <span class="token-variable">SPARK_HOME</span>=<span class="token-string">"/usr/local/opt/apache-spark/libexec"</span>
-<span class="token-keyword">export</span> <span class="token-variable">PATH</span>=<span class="token-string">"$SPARK_HOME/bin:$PATH"</span>
-
-<span class="token-comment"># 2. Verify spark-submit binary is accessible</span>
-<span class="token-keyword">spark-submit</span> --version</code></pre>
-          </div>
-        </div>
-
-        <h2>2. Extract K8s Master Endpoint & ECR Image</h2>
+        <h2>1. Extract Kubernetes Master API Endpoint</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-variable">$env:K8S_MASTER</span> = (<span class="token-keyword">kubectl</span> <span class="token-variable">config</span> <span class="token-function">view</span> --minify -o jsonpath=<span class="token-string">'{.clusters[0].cluster.server}'</span>)
-<span class="token-variable">$env:AWS_REGION</span> = <span class="token-string">"us-west-2"</span>
-<span class="token-variable">$env:AWS_ACCOUNT_ID</span> = (<span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span> --query <span class="token-string">Account</span> --output <span class="token-string">text</span>)
-<span class="token-variable">$env:REGISTRY_URL</span> = <span class="token-string">"$env:AWS_ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com"</span>
-<span class="token-variable">$env:ECR_IMAGE</span> = <span class="token-string">"$env:REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
+<span class="token-variable">$env:K8S_MASTER</span></code></pre>
           </div>
         </div>
 
@@ -1232,29 +1220,22 @@
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">K8S_MASTER</span>=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-<span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
-<span class="token-keyword">export</span> <span class="token-variable">AWS_ACCOUNT_ID</span>=$(aws sts get-caller-identity --query Account --output text)
-<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
-<span class="token-keyword">export</span> <span class="token-variable">ECR_IMAGE</span>=<span class="token-string">"$REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
+<span class="token-keyword">echo</span> <span class="token-variable">$K8S_MASTER</span></code></pre>
           </div>
         </div>
 
-        <h2>3. Submit Spark Job to Amazon EKS (Minimum Resources)</h2>
+        <h2>2. Submit Spark Job to Amazon EKS</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">spark-submit.cmd</span> `
+            <pre class="code-content"><code><span class="token-keyword">spark-submit</span> `
   --master <span class="token-string">"k8s://$env:K8S_MASTER"</span> `
   --deploy-mode <span class="token-string">cluster</span> `
   --name <span class="token-string">spark-on-eks-job</span> `
   --conf <span class="token-string">"spark.kubernetes.container.image=$env:ECR_IMAGE"</span> `
   --conf <span class="token-string">spark.kubernetes.authenticate.driver.serviceAccountName=spark</span> `
-  --conf <span class="token-string">spark.executor.instances=1</span> `
-  --conf <span class="token-string">spark.driver.memory=512m</span> `
-  --conf <span class="token-string">spark.driver.cores=1</span> `
-  --conf <span class="token-string">spark.executor.memory=512m</span> `
-  --conf <span class="token-string">spark.executor.cores=1</span> `
+  --conf <span class="token-string">spark.executor.instances=2</span> `
   --conf <span class="token-string">spark.kubernetes.driver.pod.name=spark-driver</span> `
   --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_PYTHON=python3</span> `
   --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_DRIVER_PYTHON=python3</span> `
@@ -1274,11 +1255,7 @@
   --name <span class="token-string">spark-on-eks-job</span> \
   --conf <span class="token-string">"spark.kubernetes.container.image=$ECR_IMAGE"</span> \
   --conf <span class="token-string">spark.kubernetes.authenticate.driver.serviceAccountName=spark</span> \
-  --conf <span class="token-string">spark.executor.instances=1</span> \
-  --conf <span class="token-string">spark.driver.memory=512m</span> \
-  --conf <span class="token-string">spark.driver.cores=1</span> \
-  --conf <span class="token-string">spark.executor.memory=512m</span> \
-  --conf <span class="token-string">spark.executor.cores=1</span> \
+  --conf <span class="token-string">spark.executor.instances=2</span> \
   --conf <span class="token-string">spark.kubernetes.driver.pod.name=spark-driver</span> \
   --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_PYTHON=python3</span> \
   --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_DRIVER_PYTHON=python3</span> \
@@ -1289,22 +1266,26 @@
           </div>
         </div>
 
-        <h2>4. Monitor Pod Execution & Stream Driver Logs</h2>
+        <h2>3. Monitor Pods & Retrieve Driver Logs</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-comment"># View active driver & executor pods</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -o wide
+          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -w
+<span class="token-keyword">kubectl</span> <span class="token-function">logs</span> <span class="token-variable">spark-driver</span></code></pre>
+        </div>
 
-<span class="token-comment"># Stream Spark Driver console logs</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">logs</span> spark-driver -f</code></pre>
+        <h2>4. Teardown Resources</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">eksctl & AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">eksctl</span> <span class="token-function">delete</span> <span class="token-variable">cluster</span> --name <span class="token-string">spark-eks-cluster</span>
+<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">delete-repository</span> --repository-name <span class="token-string">spark-on-eks</span> --force</code></pre>
         </div>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t5_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Submit & Stream Logs</span>
-              <span class="task-desc">Submit Spark job to EKS API master and verify aggregation results via `kubectl logs spark-driver -f`.</span>
+              <span class="task-label">Submit Job & Teardown Cluster</span>
+              <span class="task-desc">Extract master API endpoint, submit `spark-submit`, inspect driver logs, and delete AWS resources.</span>
             </div>
           </li>
         </ul>
@@ -1315,41 +1296,41 @@
            ==================================================================== -->
       <section class="content-panel" id="panel-6">
         <h1>Module 7: Knowledge Assessment</h1>
-        <p class="subtitle">Test your understanding of Amazon EKS, ECR image publishing, and Kubernetes Spark orchestration.</p>
+        <p class="subtitle">Test your understanding of Amazon EKS, ECR registries, and Spark submissions.</p>
 
         <div class="quiz-card">
-          <div class="quiz-question">1. How do students connect their local kubectl CLI to a pre-existing Amazon EKS cluster provided by an instructor?</div>
+          <div class="quiz-question">1. Why MUST Docker images built on Apple Silicon (M1/M2/M3) Macs include `--platform linux/amd64` when deploying to Amazon EKS?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) `aws eks update-kubeconfig --name <CLUSTER_NAME> --region <REGION>`</div>
-            <div class="quiz-option" data-correct="false">B) `eksctl create cluster --name <CLUSTER_NAME>`</div>
-            <div class="quiz-option" data-correct="false">C) `docker login --username AWS`</div>
+            <div class="quiz-option" data-correct="true">A) Standard EKS worker nodes (such as `m5.large`) run on Intel x86_64 architecture and cannot execute ARM64 container binaries</div>
+            <div class="quiz-option" data-correct="false">B) ARM64 images consume twice as much network bandwidth</div>
+            <div class="quiz-option" data-correct="false">C) Amazon ECR only accepts ZIP archive files</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">2. Why is `--platform linux/amd64` required when building Docker images on Apple Silicon (M1/M2/M3/M4) Macs for Amazon EKS?</div>
+          <div class="quiz-question">2. How do you authenticate local Docker CLI with Amazon ECR before executing `docker push`?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) EKS worker nodes run on Intel x86_64 hardware, so ARM64 images cause binary execution crashes</div>
-            <div class="quiz-option" data-correct="false">B) Amazon ECR only accepts ZIP files</div>
-            <div class="quiz-option" data-correct="false">C) Python scripts only execute on x86_64</div>
+            <div class="quiz-option" data-correct="true">A) Pipe `aws ecr get-login-password` into `docker login --username AWS --password-stdin <REGISTRY_URL>`</div>
+            <div class="quiz-option" data-correct="false">B) Run `docker login` with your AWS IAM password in plaintext</div>
+            <div class="quiz-option" data-correct="false">C) Copy your local SSH key to ECR settings</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">3. Which AWS CLI command generates a temporary Docker authentication token for Amazon ECR?</div>
+          <div class="quiz-question">3. Why should local environment variables like `PYSPARK_PYTHON` be unset in your local session before submitting to EKS?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) `aws ecr get-login-password --region <REGION> | docker login --username AWS --password-stdin <REGISTRY_URL>`</div>
-            <div class="quiz-option" data-correct="false">B) `aws configure sso login`</div>
-            <div class="quiz-option" data-correct="false">C) `kubectl create secret docker-registry`</div>
+            <div class="quiz-option" data-correct="true">A) Client environment variables can propagate to cluster pods and override container python paths, causing job crashes</div>
+            <div class="quiz-option" data-correct="false">B) They slow down network transfer speed by 90%</div>
+            <div class="quiz-option" data-correct="false">C) They cause EKS cluster nodes to reboot</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">4. What does the Spark Driver pod do when submitted to Kubernetes with `spark.executor.instances=2`?</div>
+          <div class="quiz-question">4. What command extracts the Kubernetes Master API Server URL for submission via `spark-submit`?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) Authenticates via its ServiceAccount and requests the Kubernetes API to launch 2 Executor pods</div>
-            <div class="quiz-option" data-correct="false">B) Downloads S3 files onto the local developer laptop</div>
-            <div class="quiz-option" data-correct="false">C) Launches Minikube automatically</div>
+            <div class="quiz-option" data-correct="true">A) `kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'`</div>
+            <div class="quiz-option" data-correct="false">B) `aws ecr describe-repositories`</div>
+            <div class="quiz-option" data-correct="false">C) `docker inspect spark-driver`</div>
           </div>
         </div>
 
@@ -1650,8 +1631,8 @@
       // 7. Description Text
       ctx.fillStyle = '#334155';
       ctx.font = '14px "Inter", sans-serif';
-      ctx.fillText('For successfully containerizing PySpark applications, publishing Docker images to pre-existing', canvas.width / 2, 252);
-      ctx.fillText('Amazon ECR, and orchestrating distributed Spark workloads on Amazon EKS clusters.', canvas.width / 2, 274);
+      ctx.fillText('For successfully containerizing PySpark applications, publishing to Amazon ECR,', canvas.width / 2, 252);
+      ctx.fillText('provisioning AWS EKS clusters via eksctl, and executing cloud-native Spark jobs.', canvas.width / 2, 274);
 
       // 8. Official Seal / Badge (Bottom Center)
       const sealX = canvas.width / 2;
@@ -1725,7 +1706,7 @@
       const imageURI = canvas.toDataURL("image/png");
       const studentName = (document.getElementById('studentNameInput').value.trim() || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
       const link = document.createElement('a');
-      link.download = `Spark_EKS_Certificate_${studentName}.png`;
+      link.download = `Spark_on_EKS_Certificate_${studentName}.png`;
       link.href = imageURI;
       document.body.appendChild(link);
       link.click();
@@ -1739,7 +1720,7 @@
       
       if (navigator.share) {
         canvas.toBlob(blob => {
-          const file = new File([blob], 'Spark_EKS_Certificate.png', { type: 'image/png' });
+          const file = new File([blob], 'Spark_on_EKS_Certificate.png', { type: 'image/png' });
           navigator.share({
             title: 'Spark on Amazon EKS Certificate',
             text: 'I just completed the Spark on Amazon EKS training lab!',
