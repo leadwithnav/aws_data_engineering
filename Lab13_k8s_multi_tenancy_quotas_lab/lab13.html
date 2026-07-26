@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 13: Multi-Tenancy & Quotas — Namespaces, RBAC, ResourceQuota & LimitRange</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR CONTAINER & SYNTAX HIGHLIGHTING --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* VS Code Dark Plus Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* --- QUIZ CARDS --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .quiz-question {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.1) !important;
+      border-color: var(--accent-green) !important;
+      color: var(--accent-green) !important;
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.1) !important;
+      border-color: var(--accent-red) !important;
+      color: var(--accent-red) !important;
+    }
+
+    /* --- CERTIFICATE CANVAS CONTAINER --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      outline: none;
+    }
+
+    .cert-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 0.25rem;
+    }
+
+    .btn-cert {
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-download {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    #certCanvas {
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- VECTOR ARCHITECTURE DIAGRAM --- */
+    .tech-illustration {
+      width: 100%;
+      max-width: 680px;
+      height: auto;
+      margin: 1.5rem 0;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">13</div>
+      <div class="brand-title">Lab 13: Multi-Tenancy & Quotas — Namespaces, RBAC, ResourceQuota & LimitRange</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">1. Multi-Tenant Namespaces</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">2. RBAC Roles & RoleBindings</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">3. Namespace ResourceQuota</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">4. Container LimitRange</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">5. Minikube Verification Lab</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Knowledge Quiz</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OVERVIEW & ARCHITECTURE
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Multi-Tenancy Architecture & Principles</h1>
+        <p class="subtitle">Building Secure, Isolated, and Resource-Capped Multi-Tenant Kubernetes Clusters.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Learning Objective</div>
+          <div class="callout-content">
+            <p>Master the four pillars of Kubernetes multi-tenancy: <b>Namespaces</b> (logical boundaries), <b>RBAC</b> (access permissions), <b>ResourceQuota</b> (aggregate CPU/Memory caps), and <b>LimitRange</b> (default container request/limit injection & min/max bounds).</p>
+          </div>
+        </div>
+
+        <h2>Multi-Tenancy Building Blocks Comparison</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Pillar</th>
+              <th>Kubernetes Object</th>
+              <th>Primary Purpose</th>
+              <th>Key Features</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>1. Scope</b></td>
+              <td><code>Namespace</code></td>
+              <td>Logical separation of teams, environments, or students.</td>
+              <td>Isolates object names and provides scoping boundary.</td>
+            </tr>
+            <tr>
+              <td><b>2. Security</b></td>
+              <td><code>Role</code> & <code>RoleBinding</code></td>
+              <td>Role-Based Access Control granting specific user/service permissions.</td>
+              <td>Restricts verbs (get, create, delete) on resources per namespace.</td>
+            </tr>
+            <tr>
+              <td><b>3. Quota</b></td>
+              <td><code>ResourceQuota</code></td>
+              <td>Caps aggregate resource consumption across an entire namespace.</td>
+              <td>Prevents noisy-neighbor cluster exhaustion (Total CPU, RAM, Pod count).</td>
+            </tr>
+            <tr>
+              <td><b>4. Defaults</b></td>
+              <td><code>LimitRange</code></td>
+              <td>Injects default container requests/limits and enforces min/max size bounds.</td>
+              <td>Guarantees every pod specifies CPU/Memory requests automatically.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Multi-Tenant Governance Architecture</h2>
+        <svg class="tech-illustration" viewBox="0 0 650 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Cluster Box -->
+          <rect x="10" y="10" width="630" height="260" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <text x="25" y="32" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#0f172a">KUBERNETES CLUSTER (MULTI-TENANT GOVERNANCE)</text>
+
+          <!-- Tenant 1: analytics-dev -->
+          <rect x="25" y="45" width="285" height="210" rx="8" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2" />
+          <text x="35" y="65" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#6b21a8">NAMESPACE: analytics-dev</text>
+          <rect x="35" y="78" width="265" height="40" rx="5" fill="#ffffff" stroke="#a855f7" stroke-width="1" />
+          <text x="42" y="94" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#7e22ce">RBAC: analytics-developer-role</text>
+          <text x="42" y="108" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">Verbs: get, list, watch, create (Pods/Jobs)</text>
+
+          <rect x="35" y="125" width="265" height="55" rx="5" fill="#ffffff" stroke="#a855f7" stroke-width="1" />
+          <text x="42" y="141" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#7e22ce">ResourceQuota: dev-quota</text>
+          <text x="42" y="155" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Max CPU: 4 vCPUs | Max RAM: 8GiB</text>
+          <text x="42" y="168" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Max Pods: 10 total</text>
+
+          <rect x="35" y="187" width="265" height="55" rx="5" fill="#ffffff" stroke="#a855f7" stroke-width="1" />
+          <text x="42" y="203" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#7e22ce">LimitRange: dev-limits</text>
+          <text x="42" y="217" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Default Request: 200m CPU, 256Mi RAM</text>
+          <text x="42" y="230" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Default Limit  : 1 vCPU, 1GiB RAM</text>
+
+          <!-- Tenant 2: analytics-prod -->
+          <rect x="330" y="45" width="295" height="210" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2" />
+          <text x="340" y="65" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#1e40af">NAMESPACE: analytics-prod</text>
+          <rect x="340" y="78" width="275" height="40" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1" />
+          <text x="347" y="94" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1d4ed8">RBAC: analytics-prod-admin-role</text>
+          <text x="347" y="108" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">Verbs: * (Full admin in prod namespace)</text>
+
+          <rect x="340" y="125" width="275" height="55" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1" />
+          <text x="347" y="141" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1d4ed8">ResourceQuota: prod-quota</text>
+          <text x="347" y="155" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Max CPU: 32 vCPUs | Max RAM: 64GiB</text>
+          <text x="347" y="168" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#059669">Max Pods: 50 total</text>
+
+          <rect x="340" y="187" width="275" height="55" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1" />
+          <text x="347" y="203" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1d4ed8">LimitRange: prod-limits</text>
+          <text x="347" y="217" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Default Request: 1 vCPU, 2GiB RAM</text>
+          <text x="347" y="230" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Default Limit  : 4 vCPUs, 8GiB RAM</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Multi-Tenancy Architecture</span>
+              <span class="task-desc">Understand how Namespaces, RBAC, ResourceQuota, and LimitRange combine to form secure multi-tenant clusters.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): MULTI-TENANT NAMESPACES
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: 1. Multi-Tenant Namespaces</h1>
+        <p class="subtitle">Creating isolated virtual environments for development, staging, and production teams.</p>
+
+        <h2>1. Why Use Namespaces?</h2>
+        <p>Namespaces divide a single physical Kubernetes cluster into virtual sub-clusters. They ensure resource naming uniqueness and serve as the binding scope for RBAC policies and resource quotas.</p>
+
+        <h2>2. Namespace Definition Manifest (`namespaces.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest (namespaces.yaml)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Namespace</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">analytics-dev</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">environment</span>: <span class="token-string">development</span>
+    <span class="token-keyword">team</span>: <span class="token-string">data-analytics</span>
+---
+<span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Namespace</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">analytics-prod</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">environment</span>: <span class="token-string">production</span>
+    <span class="token-keyword">team</span>: <span class="token-string">data-analytics</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Understand Namespace Scoping</span>
+              <span class="task-desc">Verify how namespaces establish isolated boundaries for Kubernetes workloads.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): RBAC ROLES & ROLEBINDINGS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: 2. RBAC Roles & RoleBindings</h1>
+        <p class="subtitle">Granting fine-grained resource permissions to developers and automated service accounts.</p>
+
+        <h2>1. Role vs ClusterRole</h2>
+        <ul class="bullet-list">
+          <li><b>Role</b>: Scoped strictly to a single namespace. Defines allowed actions (verbs) on API resources (pods, jobs, services).</li>
+          <li><b>RoleBinding</b>: Binds a Role to a User, Group, or ServiceAccount within that namespace.</li>
+        </ul>
+
+        <h2>2. Developer RBAC Manifest (`dev-rbac.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest (dev-rbac.yaml)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">rbac.authorization.k8s.io/v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Role</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">developer-role</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">analytics-dev</span>
+<span class="token-keyword">rules</span>:
+  - <span class="token-keyword">apiGroups</span>: [<span class="token-string">""</span>]
+    <span class="token-keyword">resources</span>: [<span class="token-string">"pods"</span>, <span class="token-string">"pods/log"</span>, <span class="token-string">"services"</span>, <span class="token-string">"configmaps"</span>]
+    <span class="token-keyword">verbs</span>: [<span class="token-string">"get"</span>, <span class="token-string">"list"</span>, <span class="token-string">"watch"</span>, <span class="token-string">"create"</span>, <span class="token-string">"delete"</span>]
+  - <span class="token-keyword">apiGroups</span>: [<span class="token-string">"batch"</span>]
+    <span class="token-keyword">resources</span>: [<span class="token-string">"jobs"</span>]
+    <span class="token-keyword">verbs</span>: [<span class="token-string">"get"</span>, <span class="token-string">"list"</span>, <span class="token-string">"create"</span>, <span class="token-string">"delete"</span>]
+---
+<span class="token-keyword">apiVersion</span>: <span class="token-string">rbac.authorization.k8s.io/v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">RoleBinding</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">developer-binding</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">analytics-dev</span>
+<span class="token-keyword">subjects</span>:
+  - <span class="token-keyword">kind</span>: <span class="token-string">ServiceAccount</span>
+    <span class="token-keyword">name</span>: <span class="token-string">spark-dev-sa</span>
+    <span class="token-keyword">namespace</span>: <span class="token-string">analytics-dev</span>
+<span class="token-keyword">roleRef</span>:
+  <span class="token-keyword">kind</span>: <span class="token-string">Role</span>
+  <span class="token-keyword">name</span>: <span class="token-string">developer-role</span>
+  <span class="token-keyword">apiGroup</span>: <span class="token-string">rbac.authorization.k8s.io</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Configure Namespace RBAC Security</span>
+              <span class="task-desc">Verify how Role and RoleBinding restrict service accounts to specific verbs and resources.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): NAMESPACE RESOURCEQUOTA
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: 3. Namespace ResourceQuota</h1>
+        <p class="subtitle">Capping aggregate CPU, Memory, and Pod counts to prevent noisy-neighbor cluster exhaustion.</p>
+
+        <h2>1. What ResourceQuota Controls</h2>
+        <p>A <b>ResourceQuota</b> sets aggregate resource consumption limits for an entire namespace. When total requested CPU or RAM reaches the quota ceiling, any new pod creation is rejected with an HTTP 403 Forbidden error.</p>
+
+        <h2>2. ResourceQuota Manifest (`resource-quota.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest (resource-quota.yaml)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">ResourceQuota</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">dev-quota</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">analytics-dev</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">hard</span>:
+    <span class="token-keyword">requests.cpu</span>: <span class="token-string">"2"</span>         <span class="token-comment"># Max 2 vCPUs total requested in namespace</span>
+    <span class="token-keyword">requests.memory</span>: <span class="token-string">"2Gi"</span>     <span class="token-comment"># Max 2 GB RAM total requested in namespace</span>
+    <span class="token-keyword">limits.cpu</span>: <span class="token-string">"4"</span>           <span class="token-comment"># Max 4 vCPUs limit ceiling</span>
+    <span class="token-keyword">limits.memory</span>: <span class="token-string">"4Gi"</span>       <span class="token-comment"># Max 4 GB RAM limit ceiling</span>
+    <span class="token-keyword">pods</span>: <span class="token-string">"5"</span>                  <span class="token-comment"># Max 5 total pods</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Enforce ResourceQuota Limits</span>
+              <span class="task-desc">Understand aggregate namespace resource capping across CPU, Memory, and Pod counts.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): CONTAINER LIMITRANGE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: 4. Container LimitRange</h1>
+        <p class="subtitle">Automatically injecting default CPU/RAM requests and setting min/max container size constraints.</p>
+
+        <h2>1. Why LimitRange is Essential</h2>
+        <p>If a namespace has a <code>ResourceQuota</code>, Kubernetes requires **every single container** to specify resource requests. A <b>LimitRange</b> automatically injects default CPU and Memory requests into any pod manifest that omits them, preventing pod rejection!</p>
+
+        <h2>2. LimitRange Manifest (`limit-range.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest (limit-range.yaml)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">LimitRange</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">dev-limit-range</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">analytics-dev</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">limits</span>:
+    - <span class="token-keyword">type</span>: <span class="token-string">Container</span>
+      <span class="token-keyword">default</span>:                <span class="token-comment"># Default Limit if omitted</span>
+        <span class="token-keyword">cpu</span>: <span class="token-string">"500m"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"512Mi"</span>
+      <span class="token-keyword">defaultRequest</span>:         <span class="token-comment"># Default Request if omitted</span>
+        <span class="token-keyword">cpu</span>: <span class="token-string">"100m"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"128Mi"</span>
+      <span class="token-keyword">max</span>:                    <span class="token-comment"># Maximum allowed single container size</span>
+        <span class="token-keyword">cpu</span>: <span class="token-string">"2"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"2Gi"</span>
+      <span class="token-keyword">min</span>:                    <span class="token-comment"># Minimum allowed single container size</span>
+        <span class="token-keyword">cpu</span>: <span class="token-string">"50m"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"64Mi"</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Configure Container LimitRange</span>
+              <span class="task-desc">Verify default resource injection and min/max container size constraints.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): MINIKUBE VERIFICATION LAB
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: 5. Minikube Hands-On Verification Lab</h1>
+        <p class="subtitle">Executing step-by-step minikube and kubectl commands to test multi-tenancy enforcement.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🐧 Linux / macOS (Terminal)</button>
+        </div>
+
+        <h2>Step-by-Step Hands-On Command Suite</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
+<span class="token-keyword">minikube</span> <span class="token-function">start</span> --cpus <span class="token-number">2</span> --memory <span class="token-number">4096</span>
+
+<span class="token-comment"># 2. Create isolated namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Apply ResourceQuota manifest</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">resource-quota.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Apply LimitRange manifest</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">limit-range.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 5. Verify active quotas and limits</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">resourcequota</span><span class="token-punctuation">,</span><span class="token-variable">limitrange</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 6. Test Default Injection: Deploy pod without explicit resource requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">test-pod</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 7. Inspect pod spec to verify LimitRange injected 100m CPU / 128Mi RAM requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pod</span> <span class="token-string">test-pod</span> -n <span class="token-string">analytics-dev</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">Select-String</span> <span class="token-string">"cpu:"</span> -Context <span class="token-number">0</span><span class="token-punctuation">,</span><span class="token-number">2</span>
+
+<span class="token-comment"># 8. Test Quota Breach: Deploy pod requesting 10 vCPUs (Exceeds 2 vCPU quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">giant-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=10"</span> -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Expected Output: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
+<span class="token-keyword">minikube</span> <span class="token-function">start</span> --cpus <span class="token-number">2</span> --memory <span class="token-number">4096</span>
+
+<span class="token-comment"># 2. Create isolated namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Apply ResourceQuota manifest</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">resource-quota.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Apply LimitRange manifest</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">limit-range.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 5. Verify active quotas and limits</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">resourcequota</span><span class="token-punctuation">,</span><span class="token-variable">limitrange</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 6. Test Default Injection: Deploy pod without explicit resource requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">test-pod</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 7. Inspect pod spec to verify LimitRange injected 100m CPU / 128Mi RAM requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pod</span> <span class="token-string">test-pod</span> -n <span class="token-string">analytics-dev</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">grep</span> -A 3 <span class="token-string">"requests:"</span>
+
+<span class="token-comment"># 8. Test Quota Breach: Deploy pod requesting 10 vCPUs (Exceeds 2 vCPU quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">giant-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=10"</span> -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Expected Output: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota</span></code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Execute Minikube Multi-Tenancy Verification</span>
+              <span class="task-desc">Run minikube commands to verify namespace creation, default limit injection, and quota breach rejection.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): KNOWLEDGE ASSESSMENT QUIZ
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Kubernetes Multi-Tenancy, RBAC, Quotas, and LimitRanges.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. What happens when a pod request exceeds the namespace's `ResourceQuota` limit?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Kubernetes API server immediately rejects the pod creation with an HTTP 403 Forbidden error</div>
+            <div class="quiz-option" data-correct="false">B) The pod is created and placed in Pending state indefinitely</div>
+            <div class="quiz-option" data-correct="false">C) Karpenter automatically resizes the node</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. What is the primary purpose of a `LimitRange` manifest?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Injects default CPU/RAM requests and limits into pods that omit them, and sets min/max size constraints</div>
+            <div class="quiz-option" data-correct="false">B) Configures AWS IAM user permissions</div>
+            <div class="quiz-option" data-correct="false">C) Deletes idle nodes in an AWS Auto Scaling Group</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. How does a `RoleBinding` differ from a `Role` in Kubernetes RBAC?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) A Role defines permissions (verbs & resources), while a RoleBinding grants those permissions to a user or service account</div>
+            <div class="quiz-option" data-correct="false">B) A Role grants cluster-wide admin access, while a RoleBinding applies only to S3</div>
+            <div class="quiz-option" data-correct="false">C) A Role is for Linux processes and RoleBinding is for Docker containers</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">4. Why must a `LimitRange` be configured when a `ResourceQuota` is applied to a namespace?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) ResourceQuota requires every container to have explicit CPU/Memory requests; LimitRange automatically supplies defaults if developers omit them</div>
+            <div class="quiz-option" data-correct="false">B) ResourceQuota only works on Windows nodes</div>
+            <div class="quiz-option" data-correct="false">C) LimitRange is required for Docker image pulls</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Check</span>
+              <span class="task-desc">Answer all 4 questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 8 (PANEL 7): COMPLETION CERTIFICATE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-7">
+        <h1>Module 8: Completion Certificate</h1>
+        <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
+
+        <!-- Locked Card Message -->
+        <div class="callout callout-amber" id="certLockMessage">
+          <div class="callout-title">🔒 Certificate Locked</div>
+          <div class="callout-content">
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 7 to unlock your completion certificate!</p>
+          </div>
+        </div>
+
+        <!-- Unlocked Certificate Container -->
+        <div class="cert-canvas-container" id="certUnlockedContainer" style="display: none;">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Name" value="" oninput="generateCertificate()">
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS (lab_structure.md)
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 8; // 8 total panels (0 to 7)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === 6) {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Go to Certificate →';
+      } else if (currentStep === 7) {
+        const containers = document.querySelectorAll('.task-checkbox-container');
+        let checked = 0;
+        containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
+        const pct = (containers.length > 0) ? Math.round((checked / containers.length) * 100) : 0;
+
+        if (pct === 100) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Lab Completed 🎉';
+          generateCertificate();
+        } else {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+
+      const lockMsg = document.getElementById('certLockMessage');
+      const unlockedContainer = document.getElementById('certUnlockedContainer');
+      const lockPercent = document.getElementById('certLockPercent');
+      const certSubtitle = document.getElementById('certSubtitle');
+      const btnNext = document.getElementById('btnNext');
+
+      if (lockPercent) lockPercent.innerText = percentage + '%';
+
+      if (percentage === 100) {
+        if (lockMsg) lockMsg.style.display = 'none';
+        if (unlockedContainer) unlockedContainer.style.display = 'flex';
+        if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
+        if (currentStep === 7) {
+          if (btnNext) {
+            btnNext.disabled = true;
+            btnNext.innerText = 'Lab Completed 🎉';
+          }
+          generateCertificate();
+        }
+      } else {
+        if (lockMsg) lockMsg.style.display = 'block';
+        if (unlockedContainer) unlockedContainer.style.display = 'none';
+        if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
+        if (currentStep === 7 && btnNext) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      }
+    }
+
+    // 5. Quiz Assessment Controller
+    function setupQuizListeners() {
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.addEventListener('click', function() {
+          const parent = this.parentElement;
+          const allSiblings = parent.querySelectorAll('.quiz-option');
+          allSiblings.forEach(s => s.classList.remove('correct', 'incorrect'));
+
+          const isCorrect = this.getAttribute('data-correct') === 'true';
+          if (isCorrect) {
+            this.classList.add('correct');
+          } else {
+            this.classList.add('incorrect');
+          }
+        });
+      });
+    }
+
+    // 6. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // 7. Certificate Generator (Canvas API - Parchment Style)
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const inputVal = document.getElementById('studentNameInput').value.trim();
+      const studentName = inputVal || 'Enter Your Name';
+
+      // 1. Background Fill
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#fcfbfa');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Outer Frame
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+      // 3. Inner Gold Accent Frame
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      // 4. Corner Ornaments
+      const corners = [
+        [34, 34], [canvas.width - 34, 34],
+        [34, canvas.height - 34], [canvas.width - 34, canvas.height - 34]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 5. Title
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b45309';
+      ctx.font = '800 28px "Outfit", sans-serif';
+      ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 105);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.fillText('THIS IS PROUDLY PRESENTED TO', canvas.width / 2, 145);
+
+      // 6. Student Name
+      ctx.fillStyle = inputVal ? '#1e40af' : '#94a3b8';
+      ctx.font = '800 34px "Outfit", sans-serif';
+      ctx.fillText(studentName, canvas.width / 2, 195);
+
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2 - 140, 210);
+      ctx.lineTo(canvas.width / 2 + 140, 210);
+      ctx.stroke();
+
+      // 7. Description
+      ctx.fillStyle = '#334155';
+      ctx.font = '14px "Inter", sans-serif';
+      ctx.fillText('For mastering Kubernetes Multi-Tenancy Architecture, Namespace RBAC Security,', canvas.width / 2, 252);
+      ctx.fillText('ResourceQuota enforcement, and LimitRange container default injection.', canvas.width / 2, 274);
+
+      // 8. Official Seal
+      const sealX = canvas.width / 2;
+      const sealY = 385;
+
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", sans-serif';
+      ctx.fillText('★', sealX, sealY + 7);
+
+      // 9. Date
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 13px "Inter", sans-serif';
+      ctx.fillText(`Issued: ${today}`, 65, 380);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(65, 405);
+      ctx.lineTo(205, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px "Inter", sans-serif';
+      ctx.fillText('Date of Issuance', 65, 422);
+
+      // 10. Signature
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '400 26px "Great Vibes", cursive';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 372);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 245, 405);
+      ctx.lineTo(canvas.width - 65, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '700 13px "Outfit", sans-serif';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 422);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 11px "Inter", sans-serif';
+      ctx.fillText('Lead Instructor & Principal Architect', canvas.width - 65, 438);
+    }
+
+    // 8. Download Certificate
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const imageURI = canvas.toDataURL("image/png");
+      const studentName = (document.getElementById('studentNameInput').value.trim() || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+      const link = document.createElement('a');
+      link.download = `MultiTenancy_Quotas_Certificate_${studentName}.png`;
+      link.href = imageURI;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 9. Share Certificate
+    function shareCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      
+      if (navigator.share) {
+        canvas.toBlob(blob => {
+          const file = new File([blob], 'MultiTenancy_Quotas_Certificate.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Kubernetes Multi-Tenancy & Quotas Certificate',
+            text: 'I completed the Multi-Tenancy & Quotas lab!',
+            files: [file]
+          }).catch(err => console.log('Share canceled:', err));
+        });
+      } else {
+        const studentName = document.getElementById('studentNameInput').value.trim() || 'Student';
+        const text = `🏆 I completed the Kubernetes Multi-Tenancy & Quotas lab! Certificate awarded to: ${studentName}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById('btnShareCert');
+          const orig = btn.innerText;
+          btn.innerText = 'Copied Share Link! 🚀';
+          setTimeout(() => { btn.innerText = orig; }, 2000);
+        }).catch(err => console.error('Share failed:', err));
+      }
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      setupQuizListeners();
+      updateProgress();
+      goToStep(0);
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          if (currentStep === 7) generateCertificate();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

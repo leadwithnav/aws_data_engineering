@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 14: Observability & Monitoring — Helm, Prometheus, Grafana, Flask & Spark</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 8px;
+      background-color: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: var(--transition-smooth);
+    }
+
+    #progressPercent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 45px;
+    }
+
+    /* --- MAIN WRAPPER GRID --- */
+    .main-wrapper {
+      margin-top: var(--header-height);
+      display: flex;
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.75rem 1.25rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.2);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    .step-title {
+      font-size: 0.875rem;
+      line-height: 1.3;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2.5rem 3.5rem 6rem 3.5rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--accent-blue);
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 2.25rem 0 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.4rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-left: 4px solid;
+      padding: 1.15rem 1.35rem;
+      border-radius: 8px;
+      margin: 1.75rem 0;
+      background-color: var(--bg-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .callout-purple {
+      border-left-color: var(--accent-purple);
+      background-color: rgba(124, 58, 237, 0.04);
+    }
+
+    .callout-amber {
+      border-left-color: var(--accent-amber);
+      background-color: rgba(217, 119, 6, 0.04);
+    }
+
+    .callout-blue {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(37, 99, 235, 0.04);
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+
+    .callout-content {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+    }
+
+    .callout-content p {
+      margin-bottom: 0;
+    }
+
+    /* --- OS TAB SWITCHER --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 6px;
+      background-color: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin: 1.5rem 0 1rem 0;
+      width: fit-content;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.45rem 1rem;
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .os-tab-btn.active {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR CONTAINER & SYNTAX HIGHLIGHTING --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* VS Code Dark Plus Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 1.75rem 0;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.checked {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.04);
+    }
+
+    .custom-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.checked .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.checked .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.925rem;
+      color: var(--text-primary);
+    }
+
+    .task-checkbox-container.checked .task-label {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- DATA TABLES --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    td {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    td code {
+      background-color: var(--bg-primary);
+      color: var(--accent-purple);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* --- QUIZ CARDS --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .quiz-question {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.1) !important;
+      border-color: var(--accent-green) !important;
+      color: var(--accent-green) !important;
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.1) !important;
+      border-color: var(--accent-red) !important;
+      color: var(--accent-red) !important;
+    }
+
+    /* --- CERTIFICATE CANVAS CONTAINER --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      outline: none;
+    }
+
+    .cert-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 0.25rem;
+    }
+
+    .btn-cert {
+      padding: 0.55rem 1.15rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-download {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    #certCanvas {
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- VECTOR ARCHITECTURE DIAGRAM --- */
+    .tech-illustration {
+      width: 100%;
+      max-width: 700px;
+      height: auto;
+      margin: 1.5rem 0;
+    }
+
+    /* --- STICKY FOOTER NAV --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 3.5rem;
+      z-index: 900;
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid transparent;
+    }
+
+    .btn-prev {
+      background-color: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-prev:hover:not(:disabled) {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    ul.bullet-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    ul.bullet-list li {
+      font-size: 0.925rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    /* --- RESPONSIVE ADJUSTMENTS --- */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+      .content-area {
+        margin-left: 0;
+        padding: 2rem 1.5rem 6rem 1.5rem;
+      }
+      .nav-bar {
+        left: 0;
+        padding: 0 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">14</div>
+      <div class="brand-title">Lab 14: Observability & Monitoring — Helm, Prometheus, Grafana, Flask & Spark</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Observability Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">1. Helm Package Manager Setup</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">2. Install Prometheus & Grafana</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">3. Instrument Flask App & Scraping</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">4. Instrument Spark Executor Metrics</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">5. Build Custom Grafana Dashboards</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Knowledge Quiz</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- ====================================================================
+           MODULE 1 (PANEL 0): OBSERVABILITY ARCHITECTURE
+           ==================================================================== -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Observability Architecture & Overview</h1>
+        <p class="subtitle">End-to-End Metrics Scraping & Visualization Pipeline using Helm, Prometheus, and Grafana on Minikube.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Learning Objective</div>
+          <div class="callout-content">
+            <p>Deploy the industry-standard <b>kube-prometheus-stack</b> via <b>Helm</b>. Instrument both a <b>Python Flask microservice</b> (using <code>prometheus-flask-exporter</code>) and an <b>Apache Spark cluster</b> (via Prometheus JMX metrics sink), scrape their metrics, and visualize active performance on custom <b>Grafana Dashboards</b>.</p>
+          </div>
+        </div>
+
+        <h2>Monitoring Stack Component Responsibilities</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Deployment Method</th>
+              <th>Primary Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Helm</b></td>
+              <td>CLI Tool</td>
+              <td>Kubernetes Package Manager automating chart installation and configuration.</td>
+            </tr>
+            <tr>
+              <td><b>Prometheus Server</b></td>
+              <td>Helm Chart (<code>kube-prometheus-stack</code>)</td>
+              <td>Time-series database that pulls (scrapes) metrics from target HTTP endpoints.</td>
+            </tr>
+            <tr>
+              <td><b>Grafana</b></td>
+              <td>Helm Chart (bundled or standalone)</td>
+              <td>Visualization UI platform providing real-time interactive monitoring dashboards.</td>
+            </tr>
+            <tr>
+              <td><b>Flask Microservice</b></td>
+              <td>Python App with <code>prometheus-flask-exporter</code></td>
+              <td>Exposes HTTP metrics on <code>/metrics</code> (request rates, latency, status codes).</td>
+            </tr>
+            <tr>
+              <td><b>Apache Spark</b></td>
+              <td>Spark Metrics Sink (Prometheus/JMX)</td>
+              <td>Exposes JVM memory, active executors, task execution time, and GC pause metrics.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>End-to-End Prometheus & Grafana Monitoring Architecture</h2>
+        <svg class="tech-illustration" viewBox="0 0 680 290" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Minikube Boundary -->
+          <rect x="10" y="10" width="660" height="270" rx="10" fill="#ffffff" stroke="#64748b" stroke-width="2" stroke-dasharray="6 6" />
+          <text x="25" y="32" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#0f172a">MINIKUBE KUBERNETES CLUSTER</text>
+
+          <!-- Workload 1: Flask App -->
+          <rect x="25" y="45" width="220" height="95" rx="8" fill="#f0fdf4" stroke="#059669" stroke-width="2" />
+          <text x="35" y="65" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#047857">FLASK PYTHON APP</text>
+          <text x="35" y="82" font-family="JetBrains Mono, monospace" font-size="8" fill="#059669">prometheus-flask-exporter</text>
+          <text x="35" y="98" font-family="JetBrains Mono, monospace" font-size="8" fill="#475569">Endpoint: http://app:5000/metrics</text>
+          <text x="35" y="115" font-family="Inter, sans-serif" font-size="7.5" fill="#334155">Metrics: http_requests_total, latency</text>
+
+          <!-- Workload 2: Spark Cluster -->
+          <rect x="25" y="155" width="220" height="110" rx="8" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2" />
+          <text x="35" y="175" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#6b21a8">APACHE SPARK ON K8S</text>
+          <text x="35" y="192" font-family="JetBrains Mono, monospace" font-size="8" fill="#7c3aed">Driver &amp; Executor Pods</text>
+          <text x="35" y="208" font-family="JetBrains Mono, monospace" font-size="8" fill="#475569">Metrics Sink: PrometheusServlet</text>
+          <text x="35" y="225" font-family="Inter, sans-serif" font-size="7.5" fill="#334155">Metrics: active_executors, JVM RAM, GC</text>
+
+          <!-- Scraping Arrows -->
+          <path d="M 245 92 L 315 125" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow)" />
+          <path d="M 245 210 L 315 155" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow)" />
+
+          <!-- Central Box: Prometheus Server -->
+          <rect x="315" y="90" width="160" height="100" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2" />
+          <text x="325" y="112" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#1e40af">PROMETHEUS SERVER</text>
+          <text x="325" y="129" font-family="JetBrains Mono, monospace" font-size="8" fill="#2563eb">(kube-prometheus-stack)</text>
+          <text x="325" y="148" font-family="Inter, sans-serif" font-size="8" fill="#475569">Scrapes target /metrics</text>
+          <text x="325" y="165" font-family="Inter, sans-serif" font-size="8" fill="#475569">Stores Time-Series DB</text>
+
+          <!-- Arrow to Grafana -->
+          <path d="M 475 140 L 515 140" stroke="#d97706" stroke-width="2" />
+
+          <!-- Grafana -->
+          <rect x="515" y="90" width="140" height="100" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
+          <text x="525" y="112" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#c2410c">GRAFANA UI</text>
+          <text x="525" y="129" font-family="JetBrains Mono, monospace" font-size="8" fill="#ea580c">Port 3000</text>
+          <text x="525" y="148" font-family="Inter, sans-serif" font-size="8" fill="#475569">PromQL Queries</text>
+          <text x="525" y="165" font-family="Inter, sans-serif" font-size="8" fill="#475569">Custom Dashboards</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Monitoring Pipeline Architecture</span>
+              <span class="task-desc">Understand how Helm deploys Prometheus & Grafana to scrape Flask and Spark application metrics.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): HELM SETUP
+           ==================================================================== -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: 1. Helm Package Manager Setup</h1>
+        <p class="subtitle">Installing Helm CLI and adding the Prometheus Community chart repository.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (Chocolatey/winget)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🐧 Linux / macOS (Brew)</button>
+        </div>
+
+        <h2>Install Helm & Add Chart Repositories</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Install Helm via winget or Chocolatey</span>
+<span class="token-keyword">winget</span> install Helm.Helm
+
+<span class="token-comment"># 2. Add Prometheus Community Helm Repository</span>
+<span class="token-keyword">helm</span> repo add prometheus-community https:<span class="token-comment">//prometheus-community.github.io/helm-charts</span>
+<span class="token-keyword">helm</span> repo update</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Install Helm via Homebrew</span>
+<span class="token-keyword">brew</span> install helm
+
+<span class="token-comment"># 2. Add Prometheus Community Helm Repository</span>
+<span class="token-keyword">helm</span> repo add prometheus-community https://prometheus-community.github.io/helm-charts
+<span class="token-keyword">helm</span> repo update</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Configure Helm & Prometheus Repository</span>
+              <span class="task-desc">Install Helm CLI and add the prometheus-community chart repository.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 3 (PANEL 2): PROMETHEUS & GRAFANA INSTALLATION
+           ==================================================================== -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: 2. Deploy Prometheus & Grafana via Helm</h1>
+        <p class="subtitle">Installing the full kube-prometheus-stack chart on Minikube.</p>
+
+        <h2>Deploy `kube-prometheus-stack` Chart</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Helm CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># 1. Create monitoring namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">monitoring</span>
+
+<span class="token-comment"># 2. Install Prometheus & Grafana bundle via Helm</span>
+<span class="token-keyword">helm</span> install prometheus-stack prometheus-community/kube-prometheus-stack `
+  --namespace <span class="token-string">monitoring</span> `
+  --set <span class="token-string">grafana.adminPassword=admin123</span>
+
+<span class="token-comment"># 3. Verify all monitoring pods are Running</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">monitoring</span></code></pre>
+        </div>
+
+        <h2>Access Grafana Dashboard</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">CLI Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Port-forward Grafana UI to localhost:3000</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">port-forward</span> svc/prometheus-stack-grafana <span class="token-number">3000</span>:80 -n <span class="token-string">monitoring</span>
+
+<span class="token-comment"># Login Credentials:</span>
+<span class="token-comment"># URL: http://localhost:3000</span>
+<span class="token-comment"># Username: admin</span>
+<span class="token-comment"># Password: admin123</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Deploy Prometheus & Grafana via Helm</span>
+              <span class="task-desc">Install kube-prometheus-stack, verify pods in monitoring namespace, and port-forward Grafana UI.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): INSTRUMENT FLASK APP
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: 3. Instrument Flask App & Configure Scraping</h1>
+        <p class="subtitle">Adding Prometheus metric exporters to Python Flask and deploying a ServiceMonitor.</p>
+
+        <h2>1. Python Flask Application (`app.py`) & Dockerfile</h2>
+        <p>Instrumentation using <code>prometheus_flask_exporter</code> exposes automatic HTTP metrics on <code>/metrics</code>:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Python (app.py)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">from</span> flask <span class="token-keyword">import</span> Flask
+<span class="token-keyword">from</span> prometheus_flask_exporter <span class="token-keyword">import</span> PrometheusMetrics
+
+app = Flask(__name__)
+metrics = PrometheusMetrics(app)
+
+@app.route(<span class="token-string">'/'</span>)
+<span class="token-keyword">def</span> <span class="token-function">home</span>():
+    <span class="token-keyword">return</span> <span class="token-string">"Flask Microservice Active!"</span>
+
+@app.route(<span class="token-string">'/api/data'</span>)
+<span class="token-keyword">def</span> <span class="token-function">get_data</span>():
+    <span class="token-keyword">return</span> {<span class="token-string">"status"</span>: <span class="token-string">"success"</span>, <span class="token-string">"records"</span>: 100}
+
+<span class="token-keyword">if</span> __name__ == <span class="token-string">'__main__'</span>:
+    app.run(host=<span class="token-string">'0.0.0.0'</span>, port=5000)</code></pre>
+        </div>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>FROM python:3.11-slim
+WORKDIR /app
+RUN pip install flask prometheus-flask-exporter
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]</code></pre>
+        </div>
+
+        <h2>2. Build Image on Minikube & Deploy to `apps` Namespace</h2>
+        <p>Build the container image directly into Minikube's Docker daemon so no external registry push is required:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Minikube & Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Step A: Point local Docker CLI to Minikube's internal Docker daemon</span>
+<span class="token-keyword">minikube</span> image build -t flask-prometheus-app:v1 .
+
+<span class="token-comment"># Step B: Create separate application namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">apps</span>
+
+<span class="token-comment"># Step C: Deploy Flask Application & Service in 'apps' namespace</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+<span class="token-keyword">apiVersion</span>: <span class="token-string">apps/v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Deployment</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">flask-app</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">apps</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">replicas</span>: <span class="token-number">2</span>
+  <span class="token-keyword">selector</span>:
+    <span class="token-keyword">matchLabels</span>:
+      <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+  <span class="token-keyword">template</span>:
+    <span class="token-keyword">metadata</span>:
+      <span class="token-keyword">labels</span>:
+        <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+    <span class="token-keyword">spec</span>:
+      <span class="token-keyword">containers</span>:
+      - <span class="token-keyword">name</span>: <span class="token-string">flask-container</span>
+        <span class="token-keyword">image</span>: <span class="token-string">flask-prometheus-app:v1</span>
+        <span class="token-keyword">imagePullPolicy</span>: <span class="token-string">Never</span>
+        <span class="token-keyword">ports</span>:
+        - <span class="token-keyword">containerPort</span>: <span class="token-number">5000</span>
+          <span class="token-keyword">name</span>: <span class="token-string">http</span>
+---
+<span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Service</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">flask-service</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">apps</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">ports</span>:
+  - <span class="token-keyword">port</span>: <span class="token-number">5000</span>
+    <span class="token-keyword">targetPort</span>: <span class="token-number">5000</span>
+    <span class="token-keyword">name</span>: <span class="token-string">http</span>
+  <span class="token-keyword">selector</span>:
+    <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+EOF</code></pre>
+        </div>
+
+        <h2>3. Cross-Namespace Scraping via ServiceMonitor</h2>
+        <p>Deploy the <code>ServiceMonitor</code> in the <code>apps</code> namespace. Enable cross-namespace scraping in Prometheus (in <code>monitoring</code> namespace):</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest & Helm Upgrade</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Step A: Apply ServiceMonitor in 'apps' namespace targeting flask-service</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+<span class="token-keyword">apiVersion</span>: <span class="token-string">monitoring.coreos.com/v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">ServiceMonitor</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">flask-app-monitor</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">apps</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">release</span>: <span class="token-string">prometheus-stack</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">selector</span>:
+    <span class="token-keyword">matchLabels</span>:
+      <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+  <span class="token-keyword">endpoints</span>:
+  - <span class="token-keyword">port</span>: <span class="token-string">http</span>
+    <span class="token-keyword">path</span>: <span class="token-string">/metrics</span>
+    <span class="token-keyword">interval</span>: <span class="token-string">15s</span>
+EOF
+
+<span class="token-comment"># Step B: Upgrade Prometheus Helm release to enable cross-namespace ServiceMonitor discovery</span>
+<span class="token-keyword">helm</span> upgrade prometheus-stack prometheus-community/kube-prometheus-stack `
+  --namespace <span class="token-string">monitoring</span> `
+  --set <span class="token-string">prometheus.prometheusSpec.serviceMonitorNamespaceSelector={}</span> `
+  --set <span class="token-string">prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false</span></code></pre>
+        </div>
+      <span class="token-keyword">app</span>: <span class="token-string">flask-app</span>
+  <span class="token-keyword">endpoints</span>:
+  - <span class="token-keyword">port</span>: <span class="token-string">http</span>
+    <span class="token-keyword">path</span>: <span class="token-string">/metrics</span>
+    <span class="token-keyword">interval</span>: <span class="token-string">15s</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Instrument Flask App & Deploy ServiceMonitor</span>
+              <span class="task-desc">Expose /metrics endpoint using prometheus_flask_exporter and apply ServiceMonitor CRD.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): INSTRUMENT SPARK EXECUTORS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 4: 4. Instrument Apache Spark Metrics</h1>
+        <p class="subtitle">Enabling Spark Prometheus metrics sink for Driver and Executor JVM tracking.</p>
+
+        <h2>1. Spark Metrics Configuration (`metrics.properties`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Spark Config File</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Enable Prometheus Servlet Metrics Sink for Spark Driver & Executor</span>
+*.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+*.sink.prometheusServlet.path=/metrics/prometheus
+driver.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+executor.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet</code></pre>
+        </div>
+
+        <h2>2. Spark Submit Pod Annotations for Prometheus Scraping</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Spark Submit Configs</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>--conf <span class="token-string">spark.ui.prometheus.enabled=true</span> \
+--conf <span class="token-string">spark.kubernetes.driver.annotation.prometheus.io/scrape=true</span> \
+--conf <span class="token-string">spark.kubernetes.driver.annotation.prometheus.io/port=4040</span> \
+--conf <span class="token-string">spark.kubernetes.driver.annotation.prometheus.io/path=/metrics/executors/prometheus</span> \
+--conf <span class="token-string">spark.kubernetes.executor.annotation.prometheus.io/scrape=true</span> \
+--conf <span class="token-string">spark.kubernetes.executor.annotation.prometheus.io/port=4040</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Enable Spark Prometheus Metrics Sink</span>
+              <span class="task-desc">Configure PrometheusServlet sink and add Pod annotations for Driver and Executor scraping.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 6 (PANEL 5): GRAFANA DASHBOARDS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: 5. Build Custom Grafana Dashboards</h1>
+        <p class="subtitle">Creating interactive visualization panels for Flask HTTP throughput and Spark JVM execution.</p>
+
+        <h2>1. Key PromQL Queries for Flask & Spark</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Dashboard Target</th>
+              <th>Metric / Panel Name</th>
+              <th>PromQL Query Expression</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Flask App</b></td>
+              <td>HTTP Request Throughput (req/sec)</td>
+              <td><code>rate(flask_http_request_total[5m])</code></td>
+            </tr>
+            <tr>
+              <td><b>Flask App</b></td>
+              <td>95th Percentile Latency (seconds)</td>
+              <td><code>histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket[5m]))</code></td>
+            </tr>
+            <tr>
+              <td><b>Spark Cluster</b></td>
+              <td>Active Executor Count</td>
+              <td><code>metrics_spark_executor_count</code></td>
+            </tr>
+            <tr>
+              <td><b>Spark Cluster</b></td>
+              <td>JVM Heap Memory Used (Bytes)</td>
+              <td><code>metrics_spark_jvm_heap_used_bytes</code></td>
+            </tr>
+            <tr>
+              <td><b>Spark Cluster</b></td>
+              <td>JVM GC Pause Time (ms)</td>
+              <td><code>rate(metrics_spark_jvm_GC_time_total[5m])</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>2. Import Community Spark & Flask Dashboards in Grafana</h2>
+        <p>In Grafana UI (http://localhost:3000), click <b>Dashboards → Import</b> and enter these Dashboard IDs:</p>
+        <ul class="bullet-list">
+          <li><b>Spark Monitoring Dashboard ID</b>: <code>14050</code> or <code>10693</code></li>
+          <li><b>Flask / Python Prometheus Dashboard ID</b>: <code>10826</code></li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Build Grafana Dashboards</span>
+              <span class="task-desc">Configure PromQL query panels for Flask throughput and Spark JVM memory/GC metrics.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): KNOWLEDGE ASSESSMENT QUIZ
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Helm, Prometheus, Grafana, and Spark metrics scraping.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. What is the role of Helm in Kubernetes monitoring setup?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Package manager that automates deployment of complex applications like Prometheus and Grafana using Helm Charts</div>
+            <div class="quiz-option" data-correct="false">B) A time-series database for storing JVM logs</div>
+            <div class="quiz-option" data-correct="false">C) An AWS container registry</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. How does Prometheus collect metric data from target applications?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) Pulls (scrapes) time-series data from HTTP /metrics endpoints exposed by applications</div>
+            <div class="quiz-option" data-correct="false">B) Applications write SQL records directly into Prometheus database</div>
+            <div class="quiz-option" data-correct="false">C) Via AWS CloudWatch API only</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. What is a ServiceMonitor in Prometheus Operator?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) A Kubernetes Custom Resource Definition (CRD) that tells Prometheus which services and ports to scrape</div>
+            <div class="quiz-option" data-correct="false">B) A Linux process monitoring CPU temperature</div>
+            <div class="quiz-option" data-correct="false">C) A Grafana dashboard template</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">4. Which PromQL query calculates the 5-minute average HTTP request rate for a Flask application?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true">A) rate(flask_http_request_total[5m])</div>
+            <div class="quiz-option" data-correct="false">B) sum(flask_memory_usage)</div>
+            <div class="quiz-option" data-correct="false">C) select * from http_requests</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Check</span>
+              <span class="task-desc">Answer all 4 questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 8 (PANEL 7): COMPLETION CERTIFICATE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-7">
+        <h1>Module 8: Completion Certificate</h1>
+        <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
+
+        <!-- Locked Card Message -->
+        <div class="callout callout-amber" id="certLockMessage">
+          <div class="callout-title">🔒 Certificate Locked</div>
+          <div class="callout-content">
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 7 to unlock your completion certificate!</p>
+          </div>
+        </div>
+
+        <!-- Unlocked Certificate Container -->
+        <div class="cert-canvas-container" id="certUnlockedContainer" style="display: none;">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Name" value="" oninput="generateCertificate()">
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+  </div>
+
+  <!-- ==========================================================================
+       STANDARD JAVASCRIPT CONTROLLER FUNCTIONS (lab_structure.md)
+       ========================================================================== -->
+  <script>
+    let currentStep = 0;
+    const totalStepsCount = 8; // 8 total panels (0 to 7)
+    let currentOs = 'powershell';
+
+    // 1. Navigation Controller: goToStep(stepIndex)
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= totalStepsCount) return;
+
+      currentStep = stepIndex;
+
+      // Hide all panels, activate current
+      const panels = document.querySelectorAll('.content-panel');
+      panels.forEach((p, idx) => {
+        if (idx === currentStep) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
+
+      // Update sidebar step items
+      const stepItems = document.querySelectorAll('.step-item');
+      stepItems.forEach((item, idx) => {
+        if (idx === currentStep) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      // Update sticky footer navigation buttons
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = (currentStep === 0);
+
+      if (currentStep === 6) {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Go to Certificate →';
+      } else if (currentStep === 7) {
+        const containers = document.querySelectorAll('.task-checkbox-container');
+        let checked = 0;
+        containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
+        const pct = (containers.length > 0) ? Math.round((checked / containers.length) * 100) : 0;
+
+        if (pct === 100) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Lab Completed 🎉';
+          generateCertificate();
+        } else {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerText = 'Next Step →';
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // 2. Navigation Helper: changeStep(delta)
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    // 3. OS Tab Switcher: switchOsTab(os)
+    function switchOsTab(os) {
+      currentOs = os;
+
+      const tabBtns = document.querySelectorAll('.os-tab-btn');
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-os') === os) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const contents = document.querySelectorAll('.os-content');
+      contents.forEach(content => {
+        if (content.getAttribute('data-os') === os) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Checklist Setup & Progress Controller
+    function setupChecklists() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      containers.forEach(c => {
+        c.addEventListener('click', () => {
+          c.classList.toggle('checked');
+          updateProgress();
+        });
+      });
+    }
+
+    function updateProgress() {
+      const containers = document.querySelectorAll('.task-checkbox-container');
+      const total = containers.length;
+      let checked = 0;
+      containers.forEach(c => {
+        if (c.classList.contains('checked')) checked++;
+      });
+
+      const percentage = (total > 0) ? Math.round((checked / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').innerText = percentage + '%';
+
+      const lockMsg = document.getElementById('certLockMessage');
+      const unlockedContainer = document.getElementById('certUnlockedContainer');
+      const lockPercent = document.getElementById('certLockPercent');
+      const certSubtitle = document.getElementById('certSubtitle');
+      const btnNext = document.getElementById('btnNext');
+
+      if (lockPercent) lockPercent.innerText = percentage + '%';
+
+      if (percentage === 100) {
+        if (lockMsg) lockMsg.style.display = 'none';
+        if (unlockedContainer) unlockedContainer.style.display = 'flex';
+        if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
+        if (currentStep === 7) {
+          if (btnNext) {
+            btnNext.disabled = true;
+            btnNext.innerText = 'Lab Completed 🎉';
+          }
+          generateCertificate();
+        }
+      } else {
+        if (lockMsg) lockMsg.style.display = 'block';
+        if (unlockedContainer) unlockedContainer.style.display = 'none';
+        if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
+        if (currentStep === 7 && btnNext) {
+          btnNext.disabled = true;
+          btnNext.innerText = 'Complete All Tasks First 🔒';
+        }
+      }
+    }
+
+    // 5. Quiz Assessment Controller
+    function setupQuizListeners() {
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.addEventListener('click', function() {
+          const parent = this.parentElement;
+          const allSiblings = parent.querySelectorAll('.quiz-option');
+          allSiblings.forEach(s => s.classList.remove('correct', 'incorrect'));
+
+          const isCorrect = this.getAttribute('data-correct') === 'true';
+          if (isCorrect) {
+            this.classList.add('correct');
+          } else {
+            this.classList.add('incorrect');
+          }
+        });
+      });
+    }
+
+    // 6. Clipboard Copy Function
+    function copyCode(btn) {
+      const container = btn.closest('.code-block-container');
+      const code = container.querySelector('pre.code-content').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        btn.style.backgroundColor = 'var(--accent-green)';
+        btn.style.color = '#ffffff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
+
+    // 7. Certificate Generator (Canvas API - Parchment Style)
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const inputVal = document.getElementById('studentNameInput').value.trim();
+      const studentName = inputVal || 'Enter Your Name';
+
+      // 1. Background Fill
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#fcfbfa');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Outer Frame
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+      // 3. Inner Gold Accent Frame
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      // 4. Corner Ornaments
+      const corners = [
+        [34, 34], [canvas.width - 34, 34],
+        [34, canvas.height - 34], [canvas.width - 34, canvas.height - 34]
+      ];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 5. Title
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b45309';
+      ctx.font = '800 28px "Outfit", sans-serif';
+      ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 105);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.fillText('THIS IS PROUDLY PRESENTED TO', canvas.width / 2, 145);
+
+      // 6. Student Name
+      ctx.fillStyle = inputVal ? '#1e40af' : '#94a3b8';
+      ctx.font = '800 34px "Outfit", sans-serif';
+      ctx.fillText(studentName, canvas.width / 2, 195);
+
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2 - 140, 210);
+      ctx.lineTo(canvas.width / 2 + 140, 210);
+      ctx.stroke();
+
+      // 7. Description
+      ctx.fillStyle = '#334155';
+      ctx.font = '14px "Inter", sans-serif';
+      ctx.fillText('For mastering Kubernetes Observability, Helm Package Manager, Prometheus metric scraping,', canvas.width / 2, 252);
+      ctx.fillText('Flask Python microservice instrumentation, Spark JVM metrics, and Grafana Dashboards.', canvas.width / 2, 274);
+
+      // 8. Official Seal
+      const sealX = canvas.width / 2;
+      const sealY = 385;
+
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath();
+      ctx.arc(sealX, sealY, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Outfit", sans-serif';
+      ctx.fillText('★', sealX, sealY + 7);
+
+      // 9. Date
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 13px "Inter", sans-serif';
+      ctx.fillText(`Issued: ${today}`, 65, 380);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(65, 405);
+      ctx.lineTo(205, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px "Inter", sans-serif';
+      ctx.fillText('Date of Issuance', 65, 422);
+
+      // 10. Signature
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '400 26px "Great Vibes", cursive';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 372);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 245, 405);
+      ctx.lineTo(canvas.width - 65, 405);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '700 13px "Outfit", sans-serif';
+      ctx.fillText('Navdeep Kaur', canvas.width - 65, 422);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 11px "Inter", sans-serif';
+      ctx.fillText('Lead Instructor & Principal Architect', canvas.width - 65, 438);
+    }
+
+    // 8. Download Certificate
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const imageURI = canvas.toDataURL("image/png");
+      const studentName = (document.getElementById('studentNameInput').value.trim() || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+      const link = document.createElement('a');
+      link.download = `Observability_Monitoring_Certificate_${studentName}.png`;
+      link.href = imageURI;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 9. Share Certificate
+    function shareCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      
+      if (navigator.share) {
+        canvas.toBlob(blob => {
+          const file = new File([blob], 'Observability_Monitoring_Certificate.png', { type: 'image/png' });
+          navigator.share({
+            title: 'Kubernetes Observability & Monitoring Certificate',
+            text: 'I completed the Helm, Prometheus, Grafana, Flask & Spark monitoring lab!',
+            files: [file]
+          }).catch(err => console.log('Share canceled:', err));
+        });
+      } else {
+        const studentName = document.getElementById('studentNameInput').value.trim() || 'Student';
+        const text = `🏆 I completed the Kubernetes Observability & Monitoring lab! Certificate awarded to: ${studentName}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById('btnShareCert');
+          const orig = btn.innerText;
+          btn.innerText = 'Copied Share Link! 🚀';
+          setTimeout(() => { btn.innerText = orig; }, 2000);
+        }).catch(err => console.error('Share failed:', err));
+      }
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      setupChecklists();
+      setupQuizListeners();
+      updateProgress();
+      goToStep(0);
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          if (currentStep === 7) generateCertificate();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
