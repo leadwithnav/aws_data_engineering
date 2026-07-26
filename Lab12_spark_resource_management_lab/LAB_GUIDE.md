@@ -1,7 +1,7 @@
 # Lab 12: EKS & EMR Resource Management — Who Manages What?
 
 ## Executive Summary
-This lab explains the 5-layer resource management stack when running Apache Spark workloads on Amazon EKS and EMR on EKS.
+This lab explains the 5-layer resource management stack when running Apache Spark workloads on Amazon EKS and EMR on EKS, complete with hands-on `minikube` & `kubectl` verification commands.
 
 ---
 
@@ -17,15 +17,72 @@ This lab explains the 5-layer resource management stack when running Apache Spar
 
 ---
 
-## Verification & Commands
+## Hands-On Minikube & Kubectl Testing Commands
 
 ```bash
-# 1. Check Node Allocatable CPU and Memory
-kubectl describe nodes | grep -A 6 "Allocatable:"
+# 1. Start Minikube Cluster
+minikube start --cpus 2 --memory 4096
 
-# 2. Check Pod Resource Requests & Pending Reasons
-kubectl describe pod <POD_NAME>
+# 2. Create Test Namespace
+kubectl create namespace spark-resource-test
 
-# 3. Check Namespace Resource Quotas
-kubectl get resourcequota -n <NAMESPACE>
+# 3. Apply ResourceQuota to Restrict Namespace Resources
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: test-quota
+  namespace: spark-resource-test
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: "2Gi"
+    pods: "5"
+EOF
+
+# 4. Verify Active Quota
+kubectl get resourcequota -n spark-resource-test
+
+# 5. Deploy Valid Pod (100m CPU = 0.1 vCPU) -> Status: Running
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: valid-pod
+  namespace: spark-resource-test
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+EOF
+
+kubectl get pods -n spark-resource-test
+
+# 6. Deploy Oversized Pod (10 vCPUs) -> Status: Pending (FailedScheduling)
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oversized-pod
+  namespace: spark-resource-test
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    resources:
+      requests:
+        cpu: "10"
+        memory: "1Gi"
+EOF
+
+# 7. Inspect Scheduling Failure Reason
+kubectl describe pod oversized-pod -n spark-resource-test
+# Output: Warning FailedScheduling 0/1 nodes available: 1 Insufficient cpu.
+
+# 8. Clean Up Test Namespace
+kubectl delete namespace spark-resource-test
 ```

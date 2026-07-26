@@ -1039,12 +1039,85 @@
 --conf <span class="token-string">spark.executor.memory=512m</span></code></pre>
         </div>
 
+        <h2>4. Hands-On Minikube Lab: Create Namespace, Allocate Quota & Test Scheduling</h2>
+        <p>Run these exact commands locally using <code>minikube</code> and <code>kubectl</code> to test pod scheduling and quota behavior:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Minikube & Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Step 1: Start Minikube cluster (2 vCPUs, 4GB RAM)</span>
+<span class="token-keyword">minikube</span> <span class="token-function">start</span> --cpus <span class="token-number">2</span> --memory <span class="token-number">4096</span>
+
+<span class="token-comment"># Step 2: Create test namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">spark-resource-test</span>
+
+<span class="token-comment"># Step 3: Allocate and enforce ResourceQuota limits in the namespace</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+<span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">ResourceQuota</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">test-quota</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">spark-resource-test</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">hard</span>:
+    <span class="token-keyword">requests.cpu</span>: <span class="token-string">"2"</span>
+    <span class="token-keyword">requests.memory</span>: <span class="token-string">"2Gi"</span>
+    <span class="token-keyword">pods</span>: <span class="token-string">"5"</span>
+EOF
+
+<span class="token-comment"># Step 4: Verify ResourceQuota status</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">resourcequota</span> -n <span class="token-string">spark-resource-test</span>
+
+<span class="token-comment"># Step 5: Test successful pod scheduling (100m CPU request)</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+<span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Pod</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">valid-pod</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">spark-resource-test</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+  - <span class="token-keyword">name</span>: <span class="token-string">nginx</span>
+    <span class="token-keyword">image</span>: <span class="token-string">nginx:alpine</span>
+    <span class="token-keyword">resources</span>:
+      <span class="token-keyword">requests</span>:
+        <span class="token-keyword">cpu</span>: <span class="token-string">"100m"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"128Mi"</span>
+EOF
+
+<span class="token-comment"># Verify valid-pod is Running</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">spark-resource-test</span>
+
+<span class="token-comment"># Step 6: Test scheduling failure (Requesting 10 vCPUs - Exceeds Minikube capacity)</span>
+<span class="token-keyword">cat</span> &lt;&lt;EOF | <span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f -
+<span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Pod</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">oversized-pod</span>
+  <span class="token-keyword">namespace</span>: <span class="token-string">spark-resource-test</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+  - <span class="token-keyword">name</span>: <span class="token-string">nginx</span>
+    <span class="token-keyword">image</span>: <span class="token-string">nginx:alpine</span>
+    <span class="token-keyword">resources</span>:
+      <span class="token-keyword">requests</span>:
+        <span class="token-keyword">cpu</span>: <span class="token-string">"10"</span>
+        <span class="token-keyword">memory</span>: <span class="token-string">"1Gi"</span>
+EOF
+
+<span class="token-comment"># Step 7: Inspect why oversized-pod is stuck in Pending</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">describe</span> <span class="token-variable">pod</span> <span class="token-string">oversized-pod</span> -n <span class="token-string">spark-resource-test</span>
+<span class="token-comment"># Expected output: Warning FailedScheduling 0/1 nodes available: 1 Insufficient cpu.</span>
+
+<span class="token-comment"># Step 8: Clean up test namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">delete</span> <span class="token-variable">namespace</span> <span class="token-string">spark-resource-test</span></code></pre>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Understand Layer 3 (Kubernetes Scheduler)</span>
-              <span class="task-desc">Master how kube-scheduler evaluates pod CPU/memory requests against node capacity.</span>
+              <span class="task-label">Test Minikube Resource Allocations & Scheduling</span>
+              <span class="task-desc">Run minikube commands to create namespace, apply ResourceQuota, and verify FailedScheduling via kubectl describe pod.</span>
             </div>
           </li>
         </ul>
