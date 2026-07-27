@@ -1,27 +1,22 @@
 # run_notebook.ps1
-# Script to build and run the Spark Execution Fundamentals lab inside Jupyter Notebook, exposing both Jupyter (8888) and Spark UI (4040).
+# Script to pull and run technoavengers/spark-jupyter-demo image directly
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # Get the directory of this script to ensure relative paths work
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppDir = Join-Path $ScriptDir "../app"
+$ImageName = "technoavengers/spark-jupyter-demo:latest"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "Pulling Base Image (apache/spark:3.5.1)..." -ForegroundColor Cyan
+Write-Host "Pulling Spark Jupyter Image ($ImageName)..." -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
-docker pull apache/spark:3.5.1
 
-Write-Host "`n==================================================" -ForegroundColor Cyan
-Write-Host "Building Spark Jupyter Notebook Image..." -ForegroundColor Cyan
-Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "Context path: $AppDir" -ForegroundColor Gray
-
-docker build -t spark-jupyter-demo:latest -f (Join-Path $AppDir "Dockerfile.jupyter") $AppDir
+docker pull $ImageName
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Docker build failed!"
-    exit $LASTEXITCODE
+    Write-Host "Warning: Could not pull remote image from Docker Hub. Attempting local build..." -ForegroundColor Yellow
+    docker build -t $ImageName -f (Join-Path $AppDir "Dockerfile.jupyter") $AppDir
 }
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
@@ -34,4 +29,4 @@ Write-Host "👉 http://localhost:4040" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Cyan
 
 # Run the container exposing both Jupyter (8888) and Spark UI (4040)
-docker run --rm -it -p 8888:8888 -p 4040:4040 spark-jupyter-demo:latest
+docker run --rm -it -p 8888:8888 -p 4040:4040 $ImageName

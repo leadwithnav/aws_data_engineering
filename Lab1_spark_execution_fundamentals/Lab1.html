@@ -1011,7 +1011,18 @@ grouped_df = df.groupBy("Category").sum("Amount")</code></pre>
            ==================================================================== -->
       <section class="content-panel" id="panel-3">
         <h1>Module 4: Start App & Spark UI Setup</h1>
-        <p class="subtitle">Launching the local PySpark Jupyter environment and connecting to Spark UI.</p>
+        <p class="subtitle">Launching the PySpark Jupyter environment using pre-built Docker image technoavengers/spark-jupyter-demo.</p>
+
+        <h2>Option A: Direct Docker Command (Recommended)</h2>
+        <p>Run the official pre-built container image directly from Docker Hub without needing to build locally:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code>docker run --rm -it -p 8888:8888 -p 4040:4040 technoavengers/spark-jupyter-demo:latest</code></pre>
+        </div>
+
+        <h2>Option B: Automated Local Script Launch</h2>
+        <p>Alternatively, execute the helper script in your workspace:</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -1049,7 +1060,7 @@ chmod +x local/run_notebook.sh
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Start Container & Connect to Spark UI</span>
-              <span class="task-desc">Run launcher script, open Jupyter notebook, and verify port 4040 Spark UI connectivity.</span>
+              <span class="task-desc">Run `technoavengers/spark-jupyter-demo:latest`, open Jupyter notebook, and verify port 4040 Spark UI connectivity.</span>
             </div>
           </li>
         </ul>
