@@ -7,9 +7,4 @@ metadata:
 spec:
   containers:
     - name: flask-container
-      image: flask-container-demo:latest
-      # IfNotPresent is crucial so that Kubernetes uses the locally loaded image 
-      # instead of trying to download it from Docker Hub.
-      imagePullPolicy: IfNotPresent
-      ports:
-        - containerPort: 5000
+      image: technoavengers/primal-python

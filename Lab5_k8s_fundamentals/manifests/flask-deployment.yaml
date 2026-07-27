@@ -16,7 +16,4 @@ spec:
     spec:
       containers:
         - name: flask-container
-          image: flask-container-demo:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5000
+          image: technoavengers/primal-python

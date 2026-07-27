@@ -12,5 +12,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80         # Port exposed inside the cluster
-      targetPort: 5000 # Container port Flask is running on
+      targetPort: 80 # Container port Flask is running on
       nodePort: 30080  # Port accessible externally from host node (Minikube VM)
