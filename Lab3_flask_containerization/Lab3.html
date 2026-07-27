@@ -827,14 +827,18 @@
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
-          <span class="step-title">Testing, Exec & Logs</span>
+          <span class="step-title">Docker Hub Login & Push</span>
         </li>
         <li class="step-item" onclick="goToStep(6)">
           <span class="step-number">7</span>
-          <span class="step-title">Knowledge Quiz</span>
+          <span class="step-title">Testing, Exec & Logs</span>
         </li>
         <li class="step-item" onclick="goToStep(7)">
           <span class="step-number">8</span>
+          <span class="step-title">Knowledge Quiz</span>
+        </li>
+        <li class="step-item" onclick="goToStep(8)">
+          <span class="step-number">9</span>
           <span class="step-title">Completion Certificate</span>
         </li>
       </ul>
@@ -1168,10 +1172,90 @@ LAB_GUIDE.md</code></pre>
       </section>
 
       <!-- ====================================================================
-           MODULE 6 (PANEL 5): TESTING, EXEC & LOGS
+           MODULE 6 (PANEL 5): DOCKER HUB REGISTRY
            ==================================================================== -->
       <section class="content-panel" id="panel-5">
-        <h1>Module 6: Testing, Exec & Logs</h1>
+        <h1>Module 6: Docker Hub Registry — Account, Login, Tag & Push</h1>
+        <p class="subtitle">Publishing container images to Docker Hub public/private registry for team distribution.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 What is Docker Hub?</div>
+          <div class="callout-content">
+            <p><b>Docker Hub</b> is a hosted container image registry service provided by Docker. It allows developers to store, share, and distribute custom container images across cloud environments and team members.</p>
+          </div>
+        </div>
+
+        <h2>1. Create a Free Docker Hub Account</h2>
+        <p>Before pushing container images to the cloud, create your free Docker Hub account:</p>
+        <ul class="bullet-list">
+          <li>Navigate to <a href="https://hub.docker.com" target="_blank">hub.docker.com</a> in your browser.</li>
+          <li>Click <b>Sign Up</b> and choose a unique <b>Docker ID</b> (e.g. <code>yourusername</code>).</li>
+          <li>Verify your email address to activate account privileges.</li>
+        </ul>
+
+        <h2>2. Authenticate to Docker Hub from CLI (`docker login`)</h2>
+        <p>Run the authentication command in your PowerShell or Terminal prompt:</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Authenticate your terminal session with Docker Hub</span>
+<span class="token-keyword">docker</span> <span class="token-function">login</span>
+
+<span class="token-comment"># Prompts for Username and Password / Personal Access Token (PAT):</span>
+<span class="token-comment"># Username: yourusername</span>
+<span class="token-comment"># Password: ****************</span>
+<span class="token-comment"># Output: Login Succeeded</span></code></pre>
+        </div>
+
+        <h2>3. Tag Image for Docker Hub Registry Format</h2>
+        <p>Docker Hub requires image names to follow the structure: <code>&lt;DOCKER_HUB_USERNAME&gt;/&lt;REPOSITORY_NAME&gt;:&lt;TAG&gt;</code></p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Option A: Build image directly with Docker Hub repository tag</span>
+<span class="token-keyword">docker</span> <span class="token-function">build</span> -t <span class="token-variable">yourusername/flask-container-demo:v1.0</span> .
+
+<span class="token-comment"># Option B: Tag an existing local image</span>
+<span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">flask-container-demo:latest</span> <span class="token-variable">yourusername/flask-container-demo:v1.0</span></code></pre>
+        </div>
+
+        <h2>4. Push Container Image to Docker Hub (`docker push`)</h2>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Upload image layers to Docker Hub</span>
+<span class="token-keyword">docker</span> <span class="token-function">push</span> <span class="token-variable">yourusername/flask-container-demo:v1.0</span>
+
+<span class="token-comment"># Verify repository online at: https://hub.docker.com/r/yourusername/flask-container-demo</span></code></pre>
+        </div>
+
+        <h2>5. Pull & Run from Docker Hub on Any Machine</h2>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Test pulling the remote image from Docker Hub</span>
+<span class="token-keyword">docker</span> <span class="token-function">pull</span> <span class="token-variable">yourusername/flask-container-demo:v1.0</span>
+
+<span class="token-comment"># Run container from published Docker Hub image</span>
+<span class="token-keyword">docker</span> <span class="token-function">run</span> -d -p <span class="token-number">5000</span>:<span class="token-number">5000</span> --name <span class="token-variable">hub-flask</span> <span class="token-variable">yourusername/flask-container-demo:v1.0</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Authenticate & Push Image to Docker Hub</span>
+              <span class="task-desc">Create Docker Hub account, log in via CLI, tag image with username, and push `yourusername/flask-container-demo:v1.0`.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 7 (PANEL 6): TESTING, EXEC & LOGS
+           ==================================================================== -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Testing, Exec & Logs</h1>
         <p class="subtitle">Verifying endpoints, non-root security identity, and container diagnostics.</p>
 
         <h2>1. Test Web Endpoints</h2>
@@ -1202,7 +1286,7 @@ LAB_GUIDE.md</code></pre>
         </div>
 
         <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t5_1">
+          <li class="task-checkbox-container" data-task-id="t6_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Test Container Endpoints & Exec Security</span>
@@ -1213,10 +1297,10 @@ LAB_GUIDE.md</code></pre>
       </section>
 
       <!-- ====================================================================
-           MODULE 7 (PANEL 6): KNOWLEDGE ASSESSMENT QUIZ
+           MODULE 8 (PANEL 7): KNOWLEDGE ASSESSMENT QUIZ
            ==================================================================== -->
-      <section class="content-panel" id="panel-6">
-        <h1>Module 7: Knowledge Assessment</h1>
+      <section class="content-panel" id="panel-7">
+        <h1>Module 8: Knowledge Assessment</h1>
         <p class="subtitle">Test your understanding of Docker containerization and Flask deployment.</p>
 
         <div class="quiz-card">
@@ -1267,17 +1351,17 @@ LAB_GUIDE.md</code></pre>
       </section>
 
       <!-- ====================================================================
-           MODULE 8 (PANEL 7): COMPLETION CERTIFICATE
+           MODULE 9 (PANEL 8): COMPLETION CERTIFICATE
            ==================================================================== -->
-      <section class="content-panel" id="panel-7">
-        <h1>Module 8: Completion Certificate</h1>
+      <section class="content-panel" id="panel-8">
+        <h1>Module 9: Completion Certificate</h1>
         <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
 
         <!-- Locked Card Message (shown when progress < 100%) -->
         <div class="callout callout-amber" id="certLockMessage">
           <div class="callout-title">🔒 Certificate Locked</div>
           <div class="callout-content">
-            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 7 to unlock your completion certificate!</p>
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 8 to unlock your completion certificate!</p>
           </div>
         </div>
 
@@ -1307,7 +1391,7 @@ LAB_GUIDE.md</code></pre>
        ========================================================================== -->
   <script>
     let currentStep = 0;
-    const totalStepsCount = 8; // 8 total panels (0 to 7)
+    const totalStepsCount = 9; // 9 total panels (0 to 8)
     let currentOs = 'powershell';
 
     // 1. Navigation Controller: goToStep(stepIndex)
@@ -1342,10 +1426,10 @@ LAB_GUIDE.md</code></pre>
 
       btnPrev.disabled = (currentStep === 0);
 
-      if (currentStep === 6) {
+      if (currentStep === 7) {
         btnNext.disabled = false;
         btnNext.innerText = 'Go to Certificate →';
-      } else if (currentStep === 7) {
+      } else if (currentStep === 8) {
         const containers = document.querySelectorAll('.task-checkbox-container');
         let checked = 0;
         containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
@@ -1430,7 +1514,7 @@ LAB_GUIDE.md</code></pre>
         if (lockMsg) lockMsg.style.display = 'none';
         if (unlockedContainer) unlockedContainer.style.display = 'flex';
         if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
-        if (currentStep === 7) {
+        if (currentStep === 8) {
           if (btnNext) {
             btnNext.disabled = true;
             btnNext.innerText = 'Lab Completed 🎉';
@@ -1441,7 +1525,7 @@ LAB_GUIDE.md</code></pre>
         if (lockMsg) lockMsg.style.display = 'block';
         if (unlockedContainer) unlockedContainer.style.display = 'none';
         if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
-        if (currentStep === 7 && btnNext) {
+        if (currentStep === 8 && btnNext) {
           btnNext.disabled = true;
           btnNext.innerText = 'Complete All Tasks First 🔒';
         }
@@ -1668,7 +1752,7 @@ LAB_GUIDE.md</code></pre>
       goToStep(0);
       if (document.fonts) {
         document.fonts.ready.then(() => {
-          if (currentStep === 7) generateCertificate();
+          if (currentStep === 8) generateCertificate();
         });
       }
     });
