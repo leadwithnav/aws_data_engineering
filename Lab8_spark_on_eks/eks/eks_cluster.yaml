@@ -4,7 +4,7 @@ kind: ClusterConfig
 metadata:
   name: spark-eks-cluster-new2
   region: us-west-2 # Feel free to modify the region
-  version: "1.30"   # Standard stable Kubernetes version
+  version: "1.36"   # Standard stable Kubernetes version
 
 # Enable IAM OIDC Provider for IAM Roles for Service Accounts (IRSA)
 iam:
@@ -13,9 +13,9 @@ iam:
 managedNodeGroups:
   - name: spark-node-group
     instanceType: m5.large  # Good size for Spark driver and executor pods
-    desiredCapacity: 1
+    desiredCapacity: 2
     minSize: 1
-    maxSize: 1
+    maxSize: 2
     volumeSize: 50
     privateNetworking: false  # Allows node public IPs for easy lab setups
     iam:

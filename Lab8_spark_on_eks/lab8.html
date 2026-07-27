@@ -815,26 +815,22 @@
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
-          <span class="step-title">Containerize & Local Test</span>
+          <span class="step-title">Authenticate & Push to ECR</span>
         </li>
         <li class="step-item" onclick="goToStep(3)">
           <span class="step-number">4</span>
-          <span class="step-title">Authenticate & Push to ECR</span>
+          <span class="step-title">Apply RBAC & Namespace</span>
         </li>
         <li class="step-item" onclick="goToStep(4)">
           <span class="step-number">5</span>
-          <span class="step-title">Apply RBAC & Namespace</span>
+          <span class="step-title">Submit & Monitor EKS Job</span>
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
-          <span class="step-title">Submit & Monitor EKS Job</span>
+          <span class="step-title">Knowledge Quiz</span>
         </li>
         <li class="step-item" onclick="goToStep(6)">
           <span class="step-number">7</span>
-          <span class="step-title">Knowledge Quiz</span>
-        </li>
-        <li class="step-item" onclick="goToStep(7)">
-          <span class="step-number">8</span>
           <span class="step-title">Completion Certificate</span>
         </li>
       </ul>
@@ -854,6 +850,13 @@
           <div class="callout-title">💡 Pre-Provisioned AWS Infrastructure</div>
           <div class="callout-content">
             <p>Your <b>Amazon EKS cluster</b> and <b>Amazon ECR repository</b> are pre-created by your instructor. You will connect to the existing cluster via <code>aws eks update-kubeconfig</code> and publish images to your designated ECR repository URL—no cluster creation (<code>eksctl create cluster</code>) required!</p>
+          </div>
+        </div>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">☁️ AWS CloudShell & Docker Workflow Note</div>
+          <div class="callout-content">
+            <p>AWS CloudShell environment does not run a background Docker daemon (<code>docker build</code> is run on your local machine or image is pre-pushed to ECR). Once the image is inside Amazon ECR, you can run <b>100% of Kubernetes submission & monitoring commands (<code>kubectl</code>, <code>spark-submit</code>) directly inside AWS CloudShell</b> without local tools!</p>
           </div>
         </div>
 
@@ -920,6 +923,7 @@
         <div class="os-tab-bar">
           <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+          <button class="os-tab-btn" data-os="cloudshell" onclick="switchOsTab('cloudshell')">☁️ AWS CloudShell</button>
         </div>
 
         <h2>1. Configure AWS CLI Credentials</h2>
@@ -950,6 +954,20 @@
           </div>
         </div>
 
+        <div class="os-content" data-os="cloudshell">
+          <div class="callout callout-green" style="margin-bottom: 1rem;">
+            <div class="callout-title">✅ Pre-Authenticated AWS CloudShell</div>
+            <div class="callout-content">
+              <p>In <b>AWS CloudShell</b>, your session is pre-authenticated with your IAM credentials automatically! You do <b>NOT</b> need to run <code>aws configure</code>.</p>
+            </div>
+          </div>
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Verify pre-authenticated AWS identity</span>
+<span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span></code></pre>
+          </div>
+        </div>
+
         <h2>2. Connect kubectl to Existing EKS Cluster & Check Cluster Status</h2>
         <p>Update your local kubeconfig file to connect to the pre-existing EKS cluster provided by your instructor and verify its active status:</p>
 
@@ -968,6 +986,17 @@
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-comment"># 1. Connect local kubectl to pre-existing EKS cluster</span>
+<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span>
+
+<span class="token-comment"># 2. Check EKS Cluster lifecycle status (Expected output: ACTIVE)</span>
+<span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">describe-cluster</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span> --query <span class="token-string">"cluster.status"</span> --output <span class="token-string">text</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Connect kubectl to pre-existing EKS cluster</span>
 <span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-string">us-west-2</span>
 
 <span class="token-comment"># 2. Check EKS Cluster lifecycle status (Expected output: ACTIVE)</span>
@@ -997,88 +1026,28 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 3 (PANEL 2): CONTAINERIZE & LOCAL TEST
+           MODULE 3 (PANEL 2): AUTHENTICATE & PUSH TO ECR
            ==================================================================== -->
       <section class="content-panel" id="panel-2">
-        <h1>Module 3: Containerize & Local Test</h1>
-        <p class="subtitle">Building multi-platform x86_64 Docker images for Intel EKS nodes.</p>
-
-        <div class="callout callout-blue">
-          <div class="callout-title">💡 Apple Silicon (M1/M2/M3/M4) Note</div>
-          <div class="callout-content">
-            <p>EKS worker nodes run on Intel <code>m5.large</code> (x86_64) architecture. You <b>MUST</b> include <code>--platform linux/amd64</code> during Docker build to prevent container execution crashes on EKS!</p>
-          </div>
-        </div>
-
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <h2>1. Navigate to Project Directory</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">d:\trainings\aws_data_engineering\Lab8_spark_on_eks</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">~/trainings/aws_data_engineering/Lab8_spark_on_eks</span></code></pre>
-          </div>
-        </div>
-
-        <h2>2. Build x86_64 Docker Image</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">docker</span> <span class="token-function">build</span> --platform <span class="token-string">linux/amd64</span> -t <span class="token-variable">spark-on-eks:latest</span> -f <span class="token-string">app/Dockerfile</span> <span class="token-variable">app</span></code></pre>
-        </div>
-
-        <h2>3. Local Test Execution</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">docker</span> <span class="token-function">run</span> --platform <span class="token-string">linux/amd64</span> --rm -it <span class="token-variable">spark-on-eks:latest</span> \
-  <span class="token-string">/opt/spark/bin/spark-submit</span> \
-  <span class="token-string">/opt/spark/work-dir/spark_app.py</span> \
-  <span class="token-string">/opt/spark/work-dir/sample_data.csv</span></code></pre>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t2_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Build Image & Test Run</span>
-              <span class="task-desc">Execute `docker build --platform linux/amd64` and verify console aggregation output in local docker run.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 4 (PANEL 3): AUTHENTICATE & PUSH TO ECR
-           ==================================================================== -->
-      <section class="content-panel" id="panel-3">
-        <h1>Module 4: Authenticate & Push to ECR</h1>
+        <h1>Module 3: Authenticate & Push to ECR</h1>
         <p class="subtitle">Publishing container images to the pre-existing Amazon ECR repository.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
           <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+          <button class="os-tab-btn" data-os="cloudshell" onclick="switchOsTab('cloudshell')">☁️ AWS CloudShell</button>
         </div>
 
         <h2>1. Configure ECR Environment Variables</h2>
+        <p>Set your AWS region and ECR Registry URL. <b>Note:</b> Replace <code>786461327180.dkr.ecr.us-west-2.amazonaws.com</code> with your own ECR Registry URL provided by your instructor or AWS Account:</p>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-variable">$env:AWS_REGION</span> = <span class="token-string">"us-west-2"</span>
-<span class="token-variable">$env:AWS_ACCOUNT_ID</span> = (<span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span> --query <span class="token-string">Account</span> --output <span class="token-string">text</span>)
-<span class="token-variable">$env:REGISTRY_URL</span> = <span class="token-string">"$env:AWS_ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-variable">$env:REGISTRY_URL</span> = <span class="token-string">"786461327180.dkr.ecr.$env:AWS_REGION.amazonaws.com"</span>
 <span class="token-variable">$env:ECR_IMAGE</span> = <span class="token-string">"$env:REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
           </div>
         </div>
@@ -1087,8 +1056,18 @@
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
-<span class="token-keyword">export</span> <span class="token-variable">AWS_ACCOUNT_ID</span>=$(aws sts get-caller-identity --query Account --output text)
-<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"786461327180.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
+<span class="token-keyword">export</span> <span class="token-variable">ECR_IMAGE</span>=<span class="token-string">"$REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"786461327180.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
 <span class="token-keyword">export</span> <span class="token-variable">ECR_IMAGE</span>=<span class="token-string">"$REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
           </div>
         </div>
@@ -1105,6 +1084,13 @@
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$REGISTRY_URL</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$REGISTRY_URL</span></code></pre>
           </div>
         </div>
@@ -1127,6 +1113,14 @@
           </div>
         </div>
 
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">spark-on-eks:latest</span> <span class="token-variable">$ECR_IMAGE</span>
+<span class="token-keyword">docker</span> <span class="token-function">push</span> <span class="token-variable">$ECR_IMAGE</span></code></pre>
+          </div>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
@@ -1139,10 +1133,10 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 5 (PANEL 4): APPLY RBAC & NAMESPACE
+           MODULE 4 (PANEL 3): APPLY RBAC & NAMESPACE
            ==================================================================== -->
-      <section class="content-panel" id="panel-4">
-        <h1>Module 5: Apply RBAC & Namespace</h1>
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Apply RBAC & Namespace</h1>
         <p class="subtitle">Configuring Kubernetes RBAC permissions and session environment variables.</p>
 
         <h2>1. Environment Variable Cleanup</h2>
@@ -1176,16 +1170,17 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 6 (PANEL 5): SUBMIT & MONITOR EKS JOB
+           MODULE 5 (PANEL 4): SUBMIT & MONITOR EKS JOB
            ==================================================================== -->
-      <section class="content-panel" id="panel-5">
-        <h1>Module 6: Submit & Monitor EKS Job</h1>
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Submit & Monitor EKS Job</h1>
         <p class="subtitle">Extracting cluster API master endpoint and submitting cluster mode Spark jobs.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
           <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+          <button class="os-tab-btn" data-os="cloudshell" onclick="switchOsTab('cloudshell')">☁️ AWS CloudShell</button>
         </div>
 
         <h2>1. Verify & Configure Local Spark Environment</h2>
@@ -1215,6 +1210,20 @@
           </div>
         </div>
 
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Download & extract Apache Spark in CloudShell (if not pre-installed)</span>
+<span class="token-keyword">curl</span> -O <span class="token-string">https://archive.apache.org/dist/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz</span>
+<span class="token-keyword">tar</span> -xzf <span class="token-string">spark-3.5.1-bin-hadoop3.tgz</span>
+<span class="token-keyword">export</span> <span class="token-variable">SPARK_HOME</span>=<span class="token-string">"$HOME/spark-3.5.1-bin-hadoop3"</span>
+<span class="token-keyword">export</span> <span class="token-variable">PATH</span>=<span class="token-string">"$SPARK_HOME/bin:$PATH"</span>
+
+<span class="token-comment"># 2. Verify spark-submit binary is accessible</span>
+<span class="token-keyword">spark-submit</span> --version</code></pre>
+          </div>
+        </div>
+
         <h2>2. Extract K8s Master Endpoint & ECR Image</h2>
 
         <div class="os-content active" data-os="powershell">
@@ -1222,8 +1231,8 @@
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-variable">$env:K8S_MASTER</span> = (<span class="token-keyword">kubectl</span> <span class="token-variable">config</span> <span class="token-function">view</span> --minify -o jsonpath=<span class="token-string">'{.clusters[0].cluster.server}'</span>)
 <span class="token-variable">$env:AWS_REGION</span> = <span class="token-string">"us-west-2"</span>
-<span class="token-variable">$env:AWS_ACCOUNT_ID</span> = (<span class="token-keyword">aws</span> <span class="token-variable">sts</span> <span class="token-function">get-caller-identity</span> --query <span class="token-string">Account</span> --output <span class="token-string">text</span>)
-<span class="token-variable">$env:REGISTRY_URL</span> = <span class="token-string">"$env:AWS_ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-variable">$env:REGISTRY_URL</span> = <span class="token-string">"786461327180.dkr.ecr.$env:AWS_REGION.amazonaws.com"</span>
 <span class="token-variable">$env:ECR_IMAGE</span> = <span class="token-string">"$env:REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
           </div>
         </div>
@@ -1233,8 +1242,19 @@
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">K8S_MASTER</span>=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 <span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
-<span class="token-keyword">export</span> <span class="token-variable">AWS_ACCOUNT_ID</span>=$(aws sts get-caller-identity --query Account --output text)
-<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"786461327180.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
+<span class="token-keyword">export</span> <span class="token-variable">ECR_IMAGE</span>=<span class="token-string">"$REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">K8S_MASTER</span>=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+<span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
+<span class="token-comment"># Replace REGISTRY_URL with your own ECR Registry URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">REGISTRY_URL</span>=<span class="token-string">"786461327180.dkr.ecr.$AWS_REGION.amazonaws.com"</span>
 <span class="token-keyword">export</span> <span class="token-variable">ECR_IMAGE</span>=<span class="token-string">"$REGISTRY_URL/spark-on-eks:latest"</span></code></pre>
           </div>
         </div>
@@ -1289,6 +1309,30 @@
           </div>
         </div>
 
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">spark-submit</span> \
+  --master <span class="token-string">"k8s://$K8S_MASTER"</span> \
+  --deploy-mode <span class="token-string">cluster</span> \
+  --name <span class="token-string">spark-on-eks-job</span> \
+  --conf <span class="token-string">"spark.kubernetes.container.image=$ECR_IMAGE"</span> \
+  --conf <span class="token-string">spark.kubernetes.authenticate.driver.serviceAccountName=spark</span> \
+  --conf <span class="token-string">spark.executor.instances=1</span> \
+  --conf <span class="token-string">spark.driver.memory=512m</span> \
+  --conf <span class="token-string">spark.driver.cores=1</span> \
+  --conf <span class="token-string">spark.executor.memory=512m</span> \
+  --conf <span class="token-string">spark.executor.cores=1</span> \
+  --conf <span class="token-string">spark.kubernetes.driver.pod.name=spark-driver</span> \
+  --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_PYTHON=python3</span> \
+  --conf <span class="token-string">spark.kubernetes.driverEnv.PYSPARK_DRIVER_PYTHON=python3</span> \
+  --conf <span class="token-string">spark.executorEnv.PYSPARK_PYTHON=python3</span> \
+  --conf <span class="token-string">spark.executorEnv.PYSPARK_DRIVER_PYTHON=python3</span> \
+  <span class="token-string">local:///opt/spark/work-dir/spark_app.py</span> \
+  <span class="token-string">/opt/spark/work-dir/sample_data.csv</span></code></pre>
+          </div>
+        </div>
+
         <h2>4. Monitor Pod Execution & Stream Driver Logs</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
@@ -1311,10 +1355,10 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 7 (PANEL 6): KNOWLEDGE ASSESSMENT QUIZ
+           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
            ==================================================================== -->
-      <section class="content-panel" id="panel-6">
-        <h1>Module 7: Knowledge Assessment</h1>
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Knowledge Assessment</h1>
         <p class="subtitle">Test your understanding of Amazon EKS, ECR image publishing, and Kubernetes Spark orchestration.</p>
 
         <div class="quiz-card">
@@ -1365,17 +1409,17 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 8 (PANEL 7): COMPLETION CERTIFICATE
+           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
            ==================================================================== -->
-      <section class="content-panel" id="panel-7">
-        <h1>Module 8: Completion Certificate</h1>
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Completion Certificate</h1>
         <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
 
         <!-- Locked Card Message (shown when progress < 100%) -->
         <div class="callout callout-amber" id="certLockMessage">
           <div class="callout-title">🔒 Certificate Locked</div>
           <div class="callout-content">
-            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 7 to unlock your completion certificate!</p>
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
           </div>
         </div>
 
@@ -1405,7 +1449,7 @@
        ========================================================================== -->
   <script>
     let currentStep = 0;
-    const totalStepsCount = 8; // 8 total panels (0 to 7)
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
     let currentOs = 'powershell';
 
     // 1. Navigation Controller: goToStep(stepIndex)
@@ -1440,10 +1484,10 @@
 
       btnPrev.disabled = (currentStep === 0);
 
-      if (currentStep === 6) {
+      if (currentStep === 5) {
         btnNext.disabled = false;
         btnNext.innerText = 'Go to Certificate →';
-      } else if (currentStep === 7) {
+      } else if (currentStep === 6) {
         const containers = document.querySelectorAll('.task-checkbox-container');
         let checked = 0;
         containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
@@ -1528,7 +1572,7 @@
         if (lockMsg) lockMsg.style.display = 'none';
         if (unlockedContainer) unlockedContainer.style.display = 'flex';
         if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
-        if (currentStep === 7) {
+        if (currentStep === 6) {
           if (btnNext) {
             btnNext.disabled = true;
             btnNext.innerText = 'Lab Completed 🎉';
@@ -1539,7 +1583,7 @@
         if (lockMsg) lockMsg.style.display = 'block';
         if (unlockedContainer) unlockedContainer.style.display = 'none';
         if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
-        if (currentStep === 7 && btnNext) {
+        if (currentStep === 6 && btnNext) {
           btnNext.disabled = true;
           btnNext.innerText = 'Complete All Tasks First 🔒';
         }

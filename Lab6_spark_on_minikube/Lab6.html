@@ -815,7 +815,7 @@
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
-          <span class="step-title">Load Image into Minikube</span>
+          <span class="step-title">Start Minikube & Load Image</span>
         </li>
         <li class="step-item" onclick="goToStep(3)">
           <span class="step-number">4</span>
@@ -823,14 +823,10 @@
         </li>
         <li class="step-item" onclick="goToStep(4)">
           <span class="step-number">5</span>
-          <span class="step-title">S3 Integration Flow</span>
+          <span class="step-title">Knowledge Quiz</span>
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
-          <span class="step-title">Knowledge Quiz</span>
-        </li>
-        <li class="step-item" onclick="goToStep(6)">
-          <span class="step-number">7</span>
           <span class="step-title">Completion Certificate</span>
         </li>
       </ul>
@@ -944,46 +940,49 @@
       <!-- ====================================================================
            MODULE 2 (PANEL 1): CONTAINERIZE SPARK APP
            ==================================================================== -->
+      <!-- ====================================================================
+           MODULE 2 (PANEL 1): CONTAINERIZE SPARK APP
+           ==================================================================== -->
       <section class="content-panel" id="panel-1">
         <h1>Module 2: Containerize Spark App</h1>
-        <p class="subtitle">Bundling PySpark script and Hadoop AWS S3 connector JARs into Docker.</p>
+        <p class="subtitle">Building a PySpark container application with in-memory DataFrame creation, transformations, and display.</p>
 
         <h2>1. PySpark Application (`app/spark_app.py`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Python Code (spark_app.py)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">import</span> <span class="token-variable">os</span>, <span class="token-variable">sys</span>
-<span class="token-keyword">from</span> <span class="token-variable">pyspark.sql</span> <span class="token-keyword">import</span> <span class="token-type">SparkSession</span>
-<span class="token-keyword">from</span> <span class="token-variable">pyspark.sql.functions</span> <span class="token-keyword">import</span> <span class="token-function">col</span>, <span class="token-function">sum</span> <span class="token-keyword">as</span> <span class="token-variable">_sum</span>, <span class="token-function">count</span>, <span class="token-function">round</span> <span class="token-keyword">as</span> <span class="token-variable">_round</span>
+          <pre class="code-content"><code><span class="token-keyword">from</span> <span class="token-variable">pyspark.sql</span> <span class="token-keyword">import</span> <span class="token-type">SparkSession</span>
+<span class="token-keyword">import</span> <span class="token-variable">pyspark.sql.functions</span> <span class="token-keyword">as</span> <span class="token-variable">F</span>
 
 <span class="token-keyword">def</span> <span class="token-function">main</span>():
+    <span class="token-comment"># 1. Initialize SparkSession</span>
     <span class="token-variable">spark</span> = <span class="token-type">SparkSession</span>.<span class="token-variable">builder</span> \
-        .<span class="token-function">appName</span>(<span class="token-string">"SparkMinikubeDemo"</span>) \
+        .<span class="token-function">appName</span>(<span class="token-string">"SparkLocalDemo"</span>) \
         .<span class="token-function">getOrCreate</span>()
-    
-    <span class="token-variable">spark</span>.<span class="token-variable">sparkContext</span>.<span class="token-function">setLogLevel</span>(<span class="token-string">"ERROR"</span>)
-    
-    <span class="token-variable">s3_bucket</span> = <span class="token-variable">os</span>.<span class="token-variable">environ</span>.<span class="token-function">get</span>(<span class="token-string">"S3_BUCKET"</span>, <span class="token-string">""</span>)
-    <span class="token-control">if</span> <span class="token-variable">s3_bucket</span>:
-        <span class="token-variable">input_path</span> = <span class="token-string">f"s3a://{s3_bucket}/sample_data.csv"</span>
-        <span class="token-variable">output_path</span> = <span class="token-string">f"s3a://{s3_bucket}/spark-output/"</span>
-    <span class="token-control">else</span>:
-        <span class="token-variable">input_path</span> = <span class="token-string">"/opt/spark/work-dir/sample_data.csv"</span>
-        <span class="token-variable">output_path</span> = <span class="token-control">None</span>
 
-    <span class="token-variable">print</span>(<span class="token-string">f"Reading transaction data from {input_path}..."</span>)
-    <span class="token-variable">df</span> = <span class="token-variable">spark</span>.<span class="token-variable">read</span>.<span class="token-function">csv</span>(<span class="token-variable">input_path</span>, <span class="token-variable">header</span>=<span class="token-control">True</span>, <span class="token-variable">inferSchema</span>=<span class="token-control">True</span>)
-    
-    <span class="token-variable">agg_df</span> = <span class="token-variable">df</span>.<span class="token-function">groupBy</span>(<span class="token-string">"Category"</span>).<span class="token-function">agg</span>(
-        <span class="token-function">count</span>(<span class="token-string">"OrderID"</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalOrders"</span>),
-        <span class="token-variable">_round</span>(<span class="token-variable">_sum</span>(<span class="token-string">"Amount"</span>), <span class="token-number">2</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalRevenue"</span>)
-    ).<span class="token-function">orderBy</span>(<span class="token-function">col</span>(<span class="token-string">"TotalRevenue"</span>).<span class="token-function">desc</span>())
-    
+    <span class="token-comment"># 2. Create In-Memory DataFrame</span>
+    <span class="token-variable">data</span> = [
+        (<span class="token-string">"Electronics"</span>, <span class="token-string">"Laptop"</span>, <span class="token-number">1200.50</span>),
+        (<span class="token-string">"Electronics"</span>, <span class="token-string">"Smartphone"</span>, <span class="token-number">799.99</span>),
+        (<span class="token-string">"Furniture"</span>, <span class="token-string">"Office Chair"</span>, <span class="token-number">249.99</span>),
+        (<span class="token-string">"Electronics"</span>, <span class="token-string">"Monitor"</span>, <span class="token-number">349.99</span>),
+        (<span class="token-string">"Furniture"</span>, <span class="token-string">"Standing Desk"</span>, <span class="token-number">599.00</span>)
+    ]
+    <span class="token-variable">schema</span> = [<span class="token-string">"Category"</span>, <span class="token-string">"ProductName"</span>, <span class="token-string">"Amount"</span>]
+
+    <span class="token-variable">df</span> = <span class="token-variable">spark</span>.<span class="token-function">createDataFrame</span>(<span class="token-variable">data</span>, <span class="token-variable">schema</span>)
+
+    <span class="token-comment"># 3. Filter DataFrame (Amount &gt;= 300.0)</span>
+    <span class="token-variable">filtered_df</span> = <span class="token-variable">df</span>.<span class="token-function">filter</span>(<span class="token-variable">F</span>.<span class="token-function">col</span>(<span class="token-string">"Amount"</span>) &gt;= <span class="token-number">300.0</span>)
+
+    <span class="token-comment"># 4. GroupBy &amp; Aggregate</span>
+    <span class="token-variable">agg_df</span> = <span class="token-variable">filtered_df</span>.<span class="token-function">groupBy</span>(<span class="token-string">"Category"</span>).<span class="token-function">agg</span>(
+        <span class="token-variable">F</span>.<span class="token-function">count</span>(<span class="token-string">"ProductName"</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalProducts"</span>),
+        <span class="token-variable">F</span>.<span class="token-function">round</span>(<span class="token-variable">F</span>.<span class="token-function">sum</span>(<span class="token-string">"Amount"</span>), <span class="token-number">2</span>).<span class="token-function">alias</span>(<span class="token-string">"TotalRevenue"</span>)
+    )
+
+    <span class="token-comment"># 5. Print output on driver stdout</span>
+    <span class="token-variable">print</span>(<span class="token-string">"=== Aggregated Results ==="</span>)
     <span class="token-variable">agg_df</span>.<span class="token-function">show</span>()
-    
-    <span class="token-control">if</span> <span class="token-variable">output_path</span>:
-        <span class="token-variable">print</span>(<span class="token-string">f"Writing parquet output to {output_path}..."</span>)
-        <span class="token-variable">agg_df</span>.<span class="token-variable">write</span>.<span class="token-function">mode</span>(<span class="token-string">"overwrite"</span>).<span class="token-function">parquet</span>(<span class="token-variable">output_path</span>)
-        <span class="token-variable">print</span>(<span class="token-string">"Parquet write complete!"</span>)
 
     <span class="token-variable">spark</span>.<span class="token-function">stop</span>()
 
@@ -991,25 +990,19 @@
     <span class="token-function">main</span>()</code></pre>
         </div>
 
-        <h2>2. Dockerfile with AWS S3 JARs (`app/Dockerfile`)</h2>
+        <h2>2. Dockerfile (`app/Dockerfile`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-keyword">FROM</span> <span class="token-variable">apache/spark:3.5.1</span>
 
 <span class="token-keyword">USER</span> <span class="token-variable">root</span>
-
-<span class="token-comment"># Download Hadoop AWS and AWS SDK bundle JARs into Spark jars directory</span>
-<span class="token-keyword">ADD</span> <span class="token-string">https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar /opt/spark/jars/</span>
-<span class="token-keyword">ADD</span> <span class="token-string">https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar /opt/spark/jars/</span>
-
 <span class="token-keyword">WORKDIR</span> <span class="token-string">/opt/spark/work-dir</span>
 
 <span class="token-keyword">COPY</span> <span class="token-string">spark_app.py /opt/spark/work-dir/</span>
-<span class="token-keyword">COPY</span> <span class="token-string">sample_data.csv /opt/spark/work-dir/</span>
+<span class="token-keyword">RUN</span> <span class="token-string">chown -R 185:185 /opt/spark/work-dir</span>
 
-<span class="token-keyword">RUN</span> <span class="token-string">chown -R 185:185 /opt/spark/work-dir /opt/spark/jars</span>
-
-<span class="token-keyword">USER</span> <span class="token-number">185</span></code></pre>
+<span class="token-keyword">USER</span> <span class="token-number">185</span>
+<span class="token-keyword">ENTRYPOINT</span> [<span class="token-string">"/opt/entrypoint.sh"</span>]</code></pre>
         </div>
 
         <!-- OS Tab Switcher -->
@@ -1018,13 +1011,13 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>3. Run Local Docker Test</h2>
+        <h2>3. Build Docker Image</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">d:\trainings\aws_data_engineering\Lab6_spark_on_minikube</span>
-<span class="token-string">.\local\run_local.ps1</span></code></pre>
+<span class="token-keyword">docker</span> <span class="token-function">build</span> -t <span class="token-variable">spark-on-minikube:latest</span> app/</code></pre>
           </div>
         </div>
 
@@ -1032,8 +1025,7 @@
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">~/trainings/aws_data_engineering/Lab6_spark_on_minikube</span>
-<span class="token-keyword">chmod</span> +x local/*.sh
-<span class="token-string">./local/run_local.sh</span></code></pre>
+<span class="token-keyword">docker</span> <span class="token-function">build</span> -t <span class="token-variable">spark-on-minikube:latest</span> app/</code></pre>
           </div>
         </div>
 
@@ -1041,46 +1033,19 @@
           <li class="task-checkbox-container" data-task-id="t1_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Build Image & Test Docker Run</span>
-              <span class="task-desc">Verify PySpark script and `hadoop-aws` JARs compile into `spark-on-minikube:latest`.</span>
+              <span class="task-label">Build Docker Image</span>
+              <span class="task-desc">Execute `docker build` to compile `spark_app.py` into `spark-on-minikube:latest` container image.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 3 (PANEL 2): LOAD IMAGE INTO MINIKUBE
+           MODULE 3 (PANEL 2): START MINIKUBE & LOAD IMAGE
            ==================================================================== -->
       <section class="content-panel" id="panel-2">
-        <h1>Module 3: Load Image into Minikube</h1>
-        <p class="subtitle">Transferring local container images into Minikube's internal registry cache.</p>
-
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Minikube CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-comment"># Load image into Minikube</span>
-<span class="token-keyword">minikube</span> <span class="token-function">image</span> load <span class="token-variable">spark-on-minikube:latest</span>
-
-<span class="token-comment"># Verify image exists in cluster cache</span>
-<span class="token-keyword">minikube</span> <span class="token-function">image</span> ls | grep <span class="token-string">"spark-on-minikube"</span></code></pre>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t2_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Cache Image in Minikube</span>
-              <span class="task-desc">Execute `minikube image load` and confirm image presence in the cluster registry.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 4 (PANEL 3): DEPLOY SPARK ON MINIKUBE
-           ==================================================================== -->
-      <section class="content-panel" id="panel-3">
-        <h1>Module 4: Deploy Spark on Minikube</h1>
-        <p class="subtitle">Starting cluster, configuring RBAC service accounts, and submitting jobs.</p>
+        <h1>Module 3: Start Minikube & Load Image</h1>
+        <p class="subtitle">Starting local Kubernetes cluster and transferring container images into Minikube's registry cache.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -1106,23 +1071,107 @@
           </div>
         </div>
 
-        <h2>2. Submit Spark Job to Minikube</h2>
+        <h2>2. Load Container Image into Minikube (After Start)</h2>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Minikube CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Load image into running Minikube cluster cache</span>
+<span class="token-keyword">minikube</span> <span class="token-function">image</span> load <span class="token-variable">spark-on-minikube:latest</span>
+
+<span class="token-comment"># Verify image exists in cluster cache</span>
+<span class="token-keyword">minikube</span> <span class="token-function">image</span> ls | grep <span class="token-string">"spark-on-minikube"</span></code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Start Minikube & Cache Image</span>
+              <span class="task-desc">Start Minikube with `minikube start`, then transfer `spark-on-minikube:latest` into the cluster using `minikube image load`.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): DEPLOY SPARK ON MINIKUBE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Deploy Spark on Minikube</h1>
+        <p class="subtitle">Configuring RBAC service accounts, submitting PySpark jobs directly, and monitoring pod execution.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <h2>1. Submit Spark Job Direct to Minikube</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-string">.\local\submit_spark_minikube.ps1</span></code></pre>
+            <pre class="code-content"><code><span class="token-comment"># 1. Navigate to Lab 6 directory</span>
+<span class="token-function">cd</span> d:\trainings\aws_data_engineering\Lab6_spark_on_minikube
+
+<span class="token-comment"># 2. Unset PySpark environment variables &amp; Apply Spark RBAC permissions</span>
+<span class="token-function">Remove-Item</span> Env:PYSPARK_PYTHON -ErrorAction SilentlyContinue
+<span class="token-function">Remove-Item</span> Env:PYSPARK_DRIVER_PYTHON -ErrorAction SilentlyContinue
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f k8s/spark-rbac.yaml
+
+<span class="token-comment"># 3. Extract &amp; Print Minikube Master API Endpoint</span>
+<span class="token-variable">$K8S_MASTER</span> = (<span class="token-keyword">kubectl</span> <span class="token-function">config</span> view --minify -o jsonpath="{.clusters[0].cluster.server}")
+<span class="token-keyword">Write-Host</span> <span class="token-string">"K8S Master API Endpoint: $K8S_MASTER"</span>
+
+<span class="token-comment"># 4. Direct spark-submit execution to Minikube cluster</span>
+spark-submit.cmd `
+  --master k8s://<span class="token-variable">$K8S_MASTER</span> `
+  --deploy-mode cluster `
+  --name spark-on-minikube-job `
+  --conf spark.kubernetes.container.image=spark-on-minikube:latest `
+  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark `
+  --conf spark.driver.memory=512m `
+  --conf spark.executor.memory=512m `
+  --conf spark.executor.instances=1 `
+  --conf spark.kubernetes.driver.pod.name=spark-driver `
+  local:///opt/spark/work-dir/spark_app.py</code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-string">./local/submit_spark_minikube.sh</span></code></pre>
+            <div class="code-header"><span class="code-lang-badge">Terminal / Git Bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Navigate to Lab 6 directory &amp; Configure Environment</span>
+<span class="token-function">cd</span> d:/trainings/aws_data_engineering/Lab6_spark_on_minikube
+<span class="token-keyword">export</span> <span class="token-variable">SPARK_HOME</span>=<span class="token-string">"/c/Tools/spark-3.5.1-bin-hadoop3"</span>
+<span class="token-keyword">export</span> <span class="token-variable">PATH</span>=<span class="token-string">"/c/Tools/spark-3.5.1-bin-hadoop3/bin:$PATH"</span>
+<span class="token-keyword">unset</span> PYSPARK_PYTHON
+<span class="token-keyword">unset</span> PYSPARK_DRIVER_PYTHON
+
+<span class="token-comment"># 2. Apply Spark RBAC permissions</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f k8s/spark-rbac.yaml
+
+<span class="token-comment"># 3. Extract &amp; Print Minikube Master API Endpoint</span>
+<span class="token-variable">K8S_MASTER</span>=$(<span class="token-keyword">kubectl</span> <span class="token-function">config</span> view --minify -o jsonpath="{.clusters[0].cluster.server}")
+<span class="token-keyword">echo</span> <span class="token-string">"K8S Master API Endpoint: $K8S_MASTER"</span>
+
+<span class="token-comment"># 4. Direct spark-submit execution to Minikube cluster</span>
+spark-submit.cmd \
+  --master k8s://<span class="token-variable">$K8S_MASTER</span> \
+  --deploy-mode cluster \
+  --name spark-on-minikube-job \
+  --conf spark.kubernetes.container.image=spark-on-minikube:latest \
+  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+  --conf spark.driver.memory=512m \
+  --conf spark.executor.memory=512m \
+  --conf spark.executor.instances=1 \
+  --conf spark.kubernetes.driver.pod.name=spark-driver \
+  local:///opt/spark/work-dir/spark_app.py</code></pre>
           </div>
         </div>
 
-        <h2>3. Monitor Driver & Executor Pods</h2>
+
+        <h2>2. Monitor Driver & Executor Pods</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-comment"># Watch dynamic pod creation</span>
@@ -1136,72 +1185,19 @@
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Submit Spark Job to Minikube</span>
-              <span class="task-desc">Run submit script, monitor `spark-driver` and `spark-exec-1` pods, and view output logs.</span>
+              <span class="task-label">Submit Spark Job & Monitor Pods</span>
+              <span class="task-desc">Apply RBAC, execute direct `spark-submit`, monitor `spark-driver` and `spark-exec-1` pods, and view output logs.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 5 (PANEL 4): S3 INTEGRATION FLOW
+           MODULE 5 (PANEL 4): KNOWLEDGE ASSESSMENT QUIZ
            ==================================================================== -->
       <section class="content-panel" id="panel-4">
-        <h1>Module 5: S3 Integration Flow</h1>
-        <p class="subtitle">Passing local AWS IAM credentials to Spark K8s pods to read and write S3 bucket data.</p>
-
-        <h2>1. Upload Dataset to Amazon S3</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">mb</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME"</span> --region <span class="token-string">us-east-1</span>
-<span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">cp</span> <span class="token-string">"app/sample_data.csv"</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME/sample_data.csv"</span></code></pre>
-        </div>
-
-        <h2>2. Submit S3 Job with Local Credentials</h2>
-
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-string">.\local\submit_spark_minikube.ps1</span> -b <span class="token-string">"YOUR_UNIQUE_BUCKET_NAME"</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-string">./local/submit_spark_minikube.sh</span> -b <span class="token-string">"YOUR_UNIQUE_BUCKET_NAME"</span></code></pre>
-          </div>
-        </div>
-
-        <h2>3. Verify S3 Parquet Output</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">AWS CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">s3</span> <span class="token-function">ls</span> <span class="token-string">"s3://YOUR_UNIQUE_BUCKET_NAME/spark-output/"</span></code></pre>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t4_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Verify S3 Read & Write</span>
-              <span class="task-desc">Confirm Spark read CSV from S3, executed aggregations, and wrote Parquet results back to S3.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
-           ==================================================================== -->
-      <section class="content-panel" id="panel-5">
-        <h1>Module 6: Knowledge Assessment</h1>
-        <p class="subtitle">Test your understanding of Spark on Kubernetes and S3 integration.</p>
+        <h1>Module 5: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Spark on Kubernetes and in-memory DataFrame operations.</p>
 
         <div class="quiz-card">
           <div class="quiz-question">1. What roles do the Driver Pod and Executor Pods fulfill when running Spark on Kubernetes?</div>
@@ -1213,11 +1209,11 @@
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">2. Which JAR libraries are required inside the Docker image for PySpark to communicate with `s3a://` URIs?</div>
+          <div class="quiz-question">2. How are in-memory PySpark DataFrames created during execution?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) `hadoop-aws` and `aws-java-sdk-bundle`</div>
-            <div class="quiz-option" data-correct="false">B) `spark-sql-kafka` and `jackson-core`</div>
-            <div class="quiz-option" data-correct="false">C) `postgresql-jdbc` and `commons-logging`</div>
+            <div class="quiz-option" data-correct="true">A) Using `spark.createDataFrame(data, schema)` without requiring external S3 storage</div>
+            <div class="quiz-option" data-correct="false">B) By writing SQL tables to disk</div>
+            <div class="quiz-option" data-correct="false">C) Using `spark.read.parquet()` only</div>
           </div>
         </div>
 
@@ -1240,7 +1236,7 @@
         </div>
 
         <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t5_1">
+          <li class="task-checkbox-container" data-task-id="t4_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Complete Knowledge Check</span>
@@ -1251,17 +1247,17 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
+           MODULE 6 (PANEL 5): COMPLETION CERTIFICATE
            ==================================================================== -->
-      <section class="content-panel" id="panel-6">
-        <h1>Module 7: Completion Certificate</h1>
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Completion Certificate</h1>
         <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
 
         <!-- Locked Card Message (shown when progress < 100%) -->
         <div class="callout callout-amber" id="certLockMessage">
           <div class="callout-title">🔒 Certificate Locked</div>
           <div class="callout-content">
-            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 5 to unlock your completion certificate!</p>
           </div>
         </div>
 
@@ -1291,7 +1287,7 @@
        ========================================================================== -->
   <script>
     let currentStep = 0;
-    const totalStepsCount = 7; // 7 total panels (0 to 6)
+    const totalStepsCount = 6; // 6 total panels (0 to 5)
     let currentOs = 'powershell';
 
     // 1. Navigation Controller: goToStep(stepIndex)
@@ -1326,10 +1322,10 @@
 
       btnPrev.disabled = (currentStep === 0);
 
-      if (currentStep === 5) {
+      if (currentStep === 4) {
         btnNext.disabled = false;
         btnNext.innerText = 'Go to Certificate →';
-      } else if (currentStep === 6) {
+      } else if (currentStep === 5) {
         const containers = document.querySelectorAll('.task-checkbox-container');
         let checked = 0;
         containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
@@ -1414,7 +1410,7 @@
         if (lockMsg) lockMsg.style.display = 'none';
         if (unlockedContainer) unlockedContainer.style.display = 'flex';
         if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
-        if (currentStep === 6) {
+        if (currentStep === 5) {
           if (btnNext) {
             btnNext.disabled = true;
             btnNext.innerText = 'Lab Completed 🎉';
@@ -1425,7 +1421,7 @@
         if (lockMsg) lockMsg.style.display = 'block';
         if (unlockedContainer) unlockedContainer.style.display = 'none';
         if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
-        if (currentStep === 6 && btnNext) {
+        if (currentStep === 5 && btnNext) {
           btnNext.disabled = true;
           btnNext.innerText = 'Complete All Tasks First 🔒';
         }
@@ -1536,8 +1532,8 @@
       // 7. Description Text
       ctx.fillStyle = '#334155';
       ctx.font = '14px "Inter", sans-serif';
-      ctx.fillText('For successfully deploying Apache Spark applications on Kubernetes (Minikube),', canvas.width / 2, 252);
-      ctx.fillText('orchestrating Driver/Executor Pods, and executing Amazon S3 cloud dataset pipelines.', canvas.width / 2, 274);
+      ctx.fillText('For successfully deploying in-memory PySpark DataFrame applications on Minikube,', canvas.width / 2, 252);
+      ctx.fillText('executing distributed transformations, and analyzing output logs across Driver and Executor Pods.', canvas.width / 2, 274);
 
       // 8. Official Seal / Badge (Bottom Center)
       const sealX = canvas.width / 2;
@@ -1652,7 +1648,7 @@
       goToStep(0);
       if (document.fonts) {
         document.fonts.ready.then(() => {
-          if (currentStep === 6) generateCertificate();
+          if (currentStep === 5) generateCertificate();
         });
       }
     });

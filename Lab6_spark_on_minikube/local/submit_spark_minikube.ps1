@@ -1,9 +1,8 @@
 # submit_spark_minikube.ps1
-# Script to download Spark client binaries and submit the Spark application to local Minikube from Windows.
+# Script to download Spark client binaries and submit the in-memory Spark application to local Minikube from Windows.
 
 [CmdletBinding()]
 param (
-    [string]$S3Bucket, # Optional: For S3 integration testing
     [string]$AwsRegion = "us-east-1"
 )
 
@@ -104,34 +103,12 @@ $Args = @(
     "--name", "spark-on-minikube-job",
     "--conf", "spark.kubernetes.container.image=$ImageUri",
     "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=spark",
-    "--conf", "spark.executor.instances=2",
-    "--conf", "spark.kubernetes.driver.pod.name=spark-driver"
+    "--conf", "spark.driver.memory=512m",
+    "--conf", "spark.executor.memory=512m",
+    "--conf", "spark.executor.instances=1",
+    "--conf", "spark.kubernetes.driver.pod.name=spark-driver",
+    "local:///opt/spark/work-dir/spark_app.py"
 )
-
-if ($S3Bucket) {
-    Write-Host "Configuring job for S3 integration targeting bucket: $S3Bucket" -ForegroundColor Yellow
-    
-    # Retrieve credentials from local AWS configuration for Minikube S3 access
-    $AccessKey = aws configure get aws_access_key_id
-    $SecretKey = aws configure get aws_secret_access_key
-    
-    if (-not $AccessKey -or -not $SecretKey) {
-        Write-Error "AWS credentials not found. Run 'aws configure' to set them up before running S3 jobs on Minikube."
-        exit 1
-    }
-    
-    $Args += "--conf", "spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
-    $Args += "--conf", "spark.hadoop.fs.s3a.access.key=$AccessKey"
-    $Args += "--conf", "spark.hadoop.fs.s3a.secret.key=$SecretKey"
-    
-    $Args += "local:///opt/spark/work-dir/spark_app.py"
-    $Args += "s3a://$S3Bucket/sample_data.csv"
-    $Args += "s3a://$S3Bucket/spark-output"
-} else {
-    Write-Host "Running job using embedded container CSV data..." -ForegroundColor Yellow
-    $Args += "local:///opt/spark/work-dir/spark_app.py"
-    $Args += "local:///opt/spark/work-dir/sample_data.csv"
-}
 
 # 5. Submit Spark Job
 Write-Host "`n[5/5] Submitting Spark job to Minikube..." -ForegroundColor Cyan

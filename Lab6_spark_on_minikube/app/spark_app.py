@@ -1,70 +1,37 @@
-import sys
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
 def main():
-    print("==========================================")
-    print("Starting Spark Application...")
-    print("==========================================")
-    
-    # Check for required input path argument
-    if len(sys.argv) < 2:
-        print("Error: Missing input path argument.")
-        print("Usage: spark_submit.sh <input_csv_path> [output_parquet_path]")
-        sys.exit(1)
-        
-    input_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else None
-    
-    print(f"Input CSV Path: {input_path}")
-    if output_path:
-        print(f"Output Parquet Path: {output_path}")
-    else:
-        print("Output Path not provided. Aggregation results will be displayed on console only.")
-        
-    # Initialize SparkSession
+    # 1. Initialize SparkSession
     spark = SparkSession.builder \
-        .appName("SparkOnEKS-Demo") \
+        .appName("SparkLocalDemo") \
         .getOrCreate()
-        
-    spark.sparkContext.setLogLevel("INFO")
-    
-    print(f"Reading CSV file from: {input_path} ...")
-    # Read the CSV from S3 (or local path)
-    # header=True to treat first row as headers, inferSchema=True to parse data types automatically
-    df = spark.read \
-        .option("header", "true") \
-        .option("inferSchema", "true") \
-        .csv(input_path)
-        
-    print("Preview of read CSV data:")
-    df.show(10, truncate=False)
-    
-    print("Performing aggregations: calculating metrics per ProductID...")
-    # Aggregate data: calculate total sales amount, total quantity, and average transaction amount per ProductID
-    # ProductID is a column in the CSV file
-    aggregated_df = df.groupBy("ProductID") \
-        .agg(
-            F.round(F.sum("Amount"), 2).alias("TotalSalesAmount"),
-            F.sum("Quantity").alias("TotalQuantitySold"),
-            F.round(F.avg("Amount"), 2).alias("AverageTransactionAmount")
-        ) \
-        .orderBy("ProductID")
-        
-    print("Aggregation results:")
-    aggregated_df.show(20, truncate=False)
-    
-    if output_path:
-        print(f"Writing aggregated results to: {output_path} ...")
-        # Save as parquet format
-        aggregated_df.write \
-            .mode("overwrite") \
-            .parquet(output_path)
-        print("Write completed successfully!")
-        
-    print("==========================================")
-    print("Spark Application Finished.")
-    print("==========================================")
+
+    # 2. Create In-Memory DataFrame
+    data = [
+        ("Electronics", "Laptop", 1200.50),
+        ("Electronics", "Smartphone", 799.99),
+        ("Furniture", "Office Chair", 249.99),
+        ("Electronics", "Monitor", 349.99),
+        ("Furniture", "Standing Desk", 599.00)
+    ]
+    schema = ["Category", "ProductName", "Amount"]
+
+    df = spark.createDataFrame(data, schema)
+
+    # 3. Filter DataFrame (Amount >= 300.0)
+    filtered_df = df.filter(F.col("Amount") >= 300.0)
+
+    # 4. GroupBy & Aggregate
+    agg_df = filtered_df.groupBy("Category").agg(
+        F.count("ProductName").alias("TotalProducts"),
+        F.round(F.sum("Amount"), 2).alias("TotalRevenue")
+    )
+
+    # 5. Print output on driver stdout
+    print("=== Aggregated Results ===")
+    agg_df.show()
+
     spark.stop()
 
 if __name__ == "__main__":

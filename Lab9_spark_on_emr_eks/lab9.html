@@ -12,7 +12,7 @@
   
   <style>
     /* ==========================================================================
-       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md - LIGHT MODE DEFAULT)
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (LIGHT MODE DEFAULT)
        ========================================================================== */
     :root {
       --bg-primary: #f8fafc;
@@ -31,10 +31,9 @@
       --accent-orange: #ea580c;
       --border-color: #e2e8f0;
       --code-bg: #1e1e1e;
-      --sidebar-width: 320px;
-      --header-height: 70px;
-      --footer-height: 70px;
-      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --sidebar-width: 310px;
+      --header-height: 65px;
+      --footer-height: 65px;
     }
 
     * {
@@ -48,7 +47,7 @@
       background-color: var(--bg-primary);
       color: var(--text-primary);
       line-height: 1.6;
-      overflow-x: hidden;
+      min-height: 100vh;
     }
 
     /* --- TOP NAVBAR --- */
@@ -64,71 +63,70 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 1.75rem;
-      z-index: 1000;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 0.85rem;
     }
 
     .brand-logo {
-      width: 38px;
-      height: 38px;
+      width: 34px;
+      height: 34px;
       background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      font-family: 'Outfit', sans-serif;
       font-weight: 800;
-      font-size: 1.25rem;
-      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+      font-size: 1.05rem;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
     }
 
     .brand-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.15rem;
       font-weight: 700;
+      font-size: 1.15rem;
       color: var(--text-primary);
+      letter-spacing: -0.01em;
     }
 
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
+      gap: 1rem;
     }
 
     .progress-bar-container {
-      width: 180px;
+      width: 150px;
       height: 8px;
-      background-color: var(--bg-primary);
+      background-color: #e2e8f0;
       border-radius: 4px;
       overflow: hidden;
-      border: 1px solid var(--border-color);
     }
 
     .progress-bar-fill {
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
-      transition: var(--transition-smooth);
+      transition: width 0.3s ease;
     }
 
     #progressPercent {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      min-width: 45px;
+      color: var(--accent-purple);
+      font-weight: 700;
     }
 
-    /* --- MAIN WRAPPER GRID --- */
+    /* --- LAYOUT WRAPPER --- */
     .main-wrapper {
-      margin-top: var(--header-height);
       display: flex;
+      padding-top: var(--header-height);
       min-height: calc(100vh - var(--header-height));
     }
 
@@ -137,68 +135,62 @@
       width: var(--sidebar-width);
       background-color: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
-      padding: 1.75rem 1.25rem;
       position: fixed;
       top: var(--header-height);
       bottom: 0;
       left: 0;
       overflow-y: auto;
+      padding: 1.75rem 1.25rem;
     }
 
     .sidebar-heading {
       font-size: 0.75rem;
-      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
       margin-bottom: 1rem;
-      padding-left: 0.5rem;
+      font-weight: 700;
     }
 
     .step-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.5rem;
     }
 
     .step-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 0.65rem 0.85rem;
-      border-radius: 8px;
+      gap: 0.85rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
       cursor: pointer;
-      color: var(--text-secondary);
-      transition: var(--transition-smooth);
+      transition: all 0.2s ease;
       border: 1px solid transparent;
     }
 
     .step-item:hover {
       background-color: var(--bg-card-hover);
-      color: var(--text-primary);
     }
 
     .step-item.active {
-      background-color: rgba(124, 58, 237, 0.08);
-      border-color: rgba(124, 58, 237, 0.2);
-      color: var(--accent-purple);
-      font-weight: 600;
+      background-color: #f3e8ff;
+      border-color: rgba(124, 58, 237, 0.3);
     }
 
     .step-number {
       width: 26px;
       height: 26px;
-      border-radius: 6px;
-      background-color: var(--bg-primary);
+      border-radius: 50%;
+      background-color: #f1f5f9;
       border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      font-weight: 600;
-      flex-shrink: 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
     }
 
     .step-item.active .step-number {
@@ -208,25 +200,31 @@
     }
 
     .step-title {
-      font-size: 0.875rem;
-      line-height: 1.3;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .step-item.active .step-title {
+      color: var(--accent-purple);
+      font-weight: 700;
     }
 
     /* --- CONTENT AREA --- */
     .content-area {
       margin-left: var(--sidebar-width);
-      flex-grow: 1;
+      flex: 1;
       padding: 2.5rem 3.5rem 6rem 3.5rem;
       max-width: 1050px;
     }
 
     .content-panel {
       display: none;
-      animation: fadeIn 0.3s ease-in-out;
     }
 
     .content-panel.active {
       display: block;
+      animation: fadeIn 0.3s ease;
     }
 
     @keyframes fadeIn {
@@ -236,120 +234,110 @@
 
     h1 {
       font-family: 'Outfit', sans-serif;
-      font-size: 2rem;
-      font-weight: 700;
+      font-size: 2.1rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
       color: var(--text-primary);
-      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
     }
 
     .subtitle {
       font-size: 1.05rem;
-      color: var(--accent-blue);
+      color: var(--text-secondary);
       margin-bottom: 2rem;
-      font-weight: 500;
     }
 
     h2 {
       font-family: 'Outfit', sans-serif;
       font-size: 1.35rem;
-      font-weight: 600;
+      font-weight: 700;
+      margin: 2rem 0 1rem 0;
       color: var(--text-primary);
-      margin: 2.25rem 0 1rem 0;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.4rem;
-    }
-
-    h3 {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 1.75rem 0 0.75rem 0;
     }
 
     p {
       color: var(--text-secondary);
       margin-bottom: 1.25rem;
-      font-size: 0.95rem;
+      font-size: 0.975rem;
     }
 
-    /* --- CALLOUT BANNERS --- */
+    /* --- CALLOUT BOXES --- */
     .callout {
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 1.75rem;
       border-left: 4px solid;
-      padding: 1.15rem 1.35rem;
-      border-radius: 8px;
-      margin: 1.75rem 0;
-      background-color: var(--bg-card);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .callout-purple {
-      border-left-color: var(--accent-purple);
-      background-color: rgba(124, 58, 237, 0.04);
-    }
-
-    .callout-amber {
-      border-left-color: var(--accent-amber);
-      background-color: rgba(217, 119, 6, 0.04);
+      background-color: #f3e8ff;
+      border-color: var(--accent-purple);
     }
 
     .callout-blue {
-      border-left-color: var(--accent-blue);
-      background-color: rgba(37, 99, 235, 0.04);
+      background-color: #eff6ff;
+      border-color: var(--accent-blue);
+    }
+
+    .callout-amber {
+      background-color: #fffbeb;
+      border-color: var(--accent-amber);
+    }
+
+    .callout-green {
+      background-color: #ecfdf5;
+      border-color: var(--accent-green);
     }
 
     .callout-title {
       font-weight: 700;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 0.95rem;
       margin-bottom: 0.4rem;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 0.5rem;
     }
 
-    .callout-purple .callout-title { color: var(--accent-purple); }
-    .callout-amber .callout-title { color: var(--accent-amber); }
-    .callout-blue .callout-title { color: var(--accent-blue); }
+    .callout-purple .callout-title { color: #6b21a8; }
+    .callout-blue .callout-title { color: #1e40af; }
+    .callout-amber .callout-title { color: #92400e; }
+    .callout-green .callout-title { color: #065f46; }
 
     .callout-content {
       font-size: 0.925rem;
-      color: var(--text-secondary);
-    }
-
-    .callout-content p {
-      margin-bottom: 0;
+      color: #334155;
     }
 
     /* --- OS TAB SWITCHER --- */
     .os-tab-bar {
       display: flex;
-      gap: 6px;
-      background-color: var(--bg-secondary);
-      padding: 4px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      margin: 1.5rem 0 1rem 0;
-      width: fit-content;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.5rem;
     }
 
     .os-tab-btn {
       background: none;
-      border: none;
+      border: 1px solid transparent;
       color: var(--text-secondary);
-      padding: 0.45rem 1rem;
-      font-family: inherit;
-      font-size: 0.825rem;
-      font-weight: 600;
-      cursor: pointer;
+      padding: 0.5rem 1.1rem;
       border-radius: 6px;
-      transition: var(--transition-smooth);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+    }
+
+    .os-tab-btn:hover {
+      color: var(--text-primary);
+      background-color: #e2e8f0;
     }
 
     .os-tab-btn.active {
-      background-color: var(--accent-purple);
       color: #ffffff;
-      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
     }
 
     .os-content {
@@ -360,117 +348,105 @@
       display: block;
     }
 
-    /* --- VS CODE EDITOR CONTAINER & SYNTAX HIGHLIGHTING SYSTEM --- */
+    /* --- CODE BLOCK CONTAINER --- */
     .code-block-container {
-      background-color: #1e1e1e; /* VS Code Dark Plus Editor Background */
-      border: 1px solid #333333;
-      border-radius: 8px;
+      background-color: var(--code-bg);
+      border: 1px solid #334155;
+      border-radius: 10px;
       overflow: hidden;
-      margin: 1.25rem 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      margin-bottom: 1.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .code-header {
+      background-color: #2d3748;
+      padding: 0.5rem 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: #252526; /* VS Code Tab / Title Bar */
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid #2d2d2d;
+      border-bottom: 1px solid #4a5568;
     }
 
     .code-lang-badge {
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.75rem;
-      color: #9cdcfe; /* VS Code Sky Blue Identifier */
+      color: #a0aec0;
+      text-transform: uppercase;
       font-weight: 600;
-      letter-spacing: 0.05em;
     }
 
     .copy-btn {
-      background-color: #333333;
-      border: 1px solid #454545;
-      color: #cccccc;
+      background-color: #4a5568;
+      border: 1px solid #718096;
+      color: #ffffff;
       padding: 0.25rem 0.65rem;
-      font-size: 0.725rem;
       border-radius: 4px;
+      font-size: 0.75rem;
       cursor: pointer;
-      font-family: inherit;
       font-weight: 600;
-      transition: var(--transition-smooth);
+      transition: all 0.2s ease;
     }
 
     .copy-btn:hover {
-      background-color: #0e639c; /* VS Code Blue Selection Accent */
-      border-color: #1177bb;
-      color: #ffffff;
+      background-color: var(--accent-purple);
+      border-color: var(--accent-purple);
     }
 
     pre.code-content {
-      padding: 1.15rem;
-      overflow-x: auto;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.875rem;
-      line-height: 1.6;
-      color: #d4d4d4; /* VS Code Standard Foreground Text */
-      background-color: #1e1e1e;
+      line-height: 1.5;
+      overflow-x: auto;
+      color: #f8fafc;
     }
 
-    /* VS Code Dark Plus Syntax Highlighting Tokens */
-    .token-keyword   { color: #569cd6; font-weight: 600; } /* VS Code Control Keywords (blue #569cd6) */
-    .token-control   { color: #c586c0; font-weight: 600; } /* VS Code Statement Keywords (purple #c586c0) */
-    .token-string    { color: #ce9178; }                   /* VS Code Strings (orange-brown #ce9178) */
-    .token-function  { color: #dcdcaa; }                   /* VS Code Functions & Methods (gold #dcdcaa) */
-    .token-type      { color: #4ec9b0; }                   /* VS Code Classes & Types (teal #4ec9b0) */
-    .token-variable  { color: #9cdcfe; }                   /* VS Code Variables & Parameters (sky blue #9cdcfe) */
-    .token-number    { color: #b5cea8; }                   /* VS Code Numbers (olive green #b5cea8) */
-    .token-comment   { color: #6a9955; font-style: italic; } /* VS Code Comments (green #6a9955) */
-    .token-prompt    { color: #808080; user-select: none; } /* VS Code Terminal Prompt Grey */
-    .token-decorator { color: #dcdcaa; font-weight: 600; } /* VS Code Python Decorators (@app.route) */
+    /* Syntax Tokens */
+    .token-comment { color: #818cf8; font-style: italic; }
+    .token-keyword { color: #c084fc; font-weight: 600; }
+    .token-variable { color: #60a5fa; }
+    .token-string { color: #34d399; }
+    .token-function { color: #f472b6; }
 
     /* --- TASK CHECKLIST --- */
     .task-checklist {
       list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-      margin: 1.75rem 0;
+      margin: 2rem 0 1rem 0;
     }
 
     .task-checkbox-container {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
+      gap: 0.85rem;
+      padding: 1.1rem 1.35rem;
       background-color: var(--bg-card);
       border: 1px solid var(--border-color);
-      padding: 1rem 1.25rem;
-      border-radius: 8px;
+      border-radius: 10px;
+      margin-bottom: 0.85rem;
       cursor: pointer;
-      transition: var(--transition-smooth);
+      transition: all 0.2s ease;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
 
     .task-checkbox-container:hover {
       border-color: var(--accent-purple);
-      background-color: var(--bg-card-hover);
     }
 
     .task-checkbox-container.checked {
+      background-color: #f0fdf4;
       border-color: var(--accent-green);
-      background-color: rgba(5, 150, 105, 0.04);
     }
 
     .custom-checkbox {
       width: 20px;
       height: 20px;
-      border: 2px solid var(--text-muted);
-      border-radius: 5px;
+      border-radius: 4px;
+      border: 2px solid #cbd5e1;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-top: 2px;
-      flex-shrink: 0;
-      transition: var(--transition-smooth);
+      transition: all 0.2s ease;
     }
 
     .task-checkbox-container.checked .custom-checkbox {
@@ -481,83 +457,37 @@
     .check-mark {
       width: 14px;
       height: 14px;
-      fill: #ffffff;
-      display: none;
+      fill: none;
+      stroke: #ffffff;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
     .task-checkbox-container.checked .check-mark {
-      display: block;
+      opacity: 1;
     }
 
     .task-content {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+      flex: 1;
     }
 
     .task-label {
-      font-weight: 600;
-      font-size: 0.925rem;
+      font-weight: 700;
+      font-size: 0.95rem;
       color: var(--text-primary);
-    }
-
-    .task-checkbox-container.checked .task-label {
-      text-decoration: line-through;
-      color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.2rem;
     }
 
     .task-desc {
-      font-size: 0.85rem;
+      font-size: 0.875rem;
       color: var(--text-secondary);
     }
 
-    /* --- DATA TABLES --- */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1.5rem 0;
-      background-color: var(--bg-card);
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
-
-    th, td {
-      padding: 0.75rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    th {
-      background-color: #f1f5f9;
-      font-weight: 600;
-      font-size: 0.775rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-primary);
-    }
-
-    td {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    td code {
-      background-color: var(--bg-primary);
-      color: var(--accent-purple);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.775rem;
-      border: 1px solid var(--border-color);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* --- QUIZ CARDS --- */
+    /* --- QUIZ STYLING --- */
     .quiz-card {
       background-color: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -568,10 +498,10 @@
     }
 
     .quiz-question {
-      font-weight: 600;
-      font-size: 1rem;
-      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 1.05rem;
       margin-bottom: 1rem;
+      color: var(--text-primary);
     }
 
     .quiz-options {
@@ -581,117 +511,93 @@
     }
 
     .quiz-option {
-      background-color: var(--bg-primary);
+      padding: 0.85rem 1.15rem;
+      background-color: #f8fafc;
       border: 1px solid var(--border-color);
-      padding: 0.75rem 1rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
       color: var(--text-secondary);
-      transition: var(--transition-smooth);
     }
 
     .quiz-option:hover {
-      border-color: var(--accent-blue);
+      border-color: var(--accent-purple);
       color: var(--text-primary);
+      background-color: #f3e8ff;
     }
 
     .quiz-option.correct {
-      background-color: rgba(5, 150, 105, 0.1) !important;
-      border-color: var(--accent-green) !important;
-      color: var(--accent-green) !important;
-      font-weight: 600;
+      background-color: #d1fae5;
+      border-color: var(--accent-green);
+      color: #065f46;
+      font-weight: 700;
     }
 
     .quiz-option.incorrect {
-      background-color: rgba(220, 38, 38, 0.1) !important;
-      border-color: var(--accent-red) !important;
-      color: var(--accent-red) !important;
+      background-color: #fee2e2;
+      border-color: var(--accent-red);
+      color: #991b1b;
     }
 
-    /* --- CERTIFICATE CANVAS CONTAINER --- */
+    /* --- CERTIFICATE CANVAS --- */
     .cert-canvas-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 1.5rem;
-      margin-top: 1.5rem;
+      margin-top: 2rem;
     }
 
     .cert-input {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      padding: 0.75rem 1.25rem;
-      border-radius: 8px;
-      font-size: 1rem;
       width: 100%;
       max-width: 400px;
+      padding: 0.75rem 1.25rem;
+      background-color: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
       text-align: center;
-      outline: none;
     }
 
     .cert-input:focus {
+      outline: none;
       border-color: var(--accent-purple);
+    }
+
+    canvas#certCanvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
     }
 
     .cert-actions {
       display: flex;
-      gap: 12px;
-      margin-top: 0.25rem;
+      gap: 1rem;
     }
 
     .btn-cert {
-      padding: 0.55rem 1.15rem;
+      padding: 0.75rem 1.5rem;
       border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      border: 1px solid transparent;
-      transition: var(--transition-smooth);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      border: none;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
     }
 
     .btn-download {
-      background-color: var(--accent-purple);
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
       color: #ffffff;
-      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
-    }
-
-    .btn-download:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
     }
 
     .btn-share {
       background-color: var(--bg-card);
-      border-color: var(--border-color);
-      color: var(--text-primary);
-    }
-
-    .btn-share:hover {
-      border-color: var(--accent-blue);
-      color: var(--accent-blue);
-    }
-
-    #certCanvas {
-      width: 100%;
-      max-width: 800px;
-      height: auto;
-      border-radius: 12px;
       border: 1px solid var(--border-color);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    }
-
-    /* --- DIAGRAM SVG CONTAINER --- */
-    .tech-illustration {
-      width: 100%;
-      max-width: 480px;
-      height: auto;
-      margin: 1.5rem 0;
+      color: var(--text-primary);
     }
 
     /* --- STICKY FOOTER NAV --- */
@@ -707,45 +613,38 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 3.5rem;
-      z-index: 900;
-    }
-
-    .footer-copyright {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      font-weight: 500;
+      z-index: 90;
+      box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .btn-nav {
       padding: 0.65rem 1.35rem;
       border-radius: 8px;
-      font-family: inherit;
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: var(--transition-smooth);
+      transition: all 0.2s ease;
       border: 1px solid transparent;
     }
 
     .btn-prev {
-      background-color: var(--bg-primary);
+      background-color: #f1f5f9;
+      color: var(--text-secondary);
       border-color: var(--border-color);
-      color: var(--text-primary);
     }
 
     .btn-prev:hover:not(:disabled) {
-      border-color: var(--accent-purple);
-      color: var(--accent-purple);
+      color: var(--text-primary);
+      background-color: #e2e8f0;
     }
 
     .btn-next {
       background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
       color: #ffffff;
-      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
     }
 
     .btn-next:hover:not(:disabled) {
-      opacity: 0.9;
+      opacity: 0.95;
       transform: translateY(-1px);
     }
 
@@ -755,30 +654,15 @@
       transform: none !important;
     }
 
-    ul.bullet-list {
-      padding-left: 1.5rem;
-      margin-bottom: 1.25rem;
+    .footer-copyright {
+      font-size: 0.825rem;
+      color: var(--text-muted);
     }
 
-    ul.bullet-list li {
-      font-size: 0.925rem;
-      color: var(--text-secondary);
-      margin-bottom: 0.4rem;
-    }
-
-    /* --- RESPONSIVE ADJUSTMENTS --- */
     @media (max-width: 1024px) {
-      .sidebar {
-        display: none;
-      }
-      .content-area {
-        margin-left: 0;
-        padding: 2rem 1.5rem 6rem 1.5rem;
-      }
-      .nav-bar {
-        left: 0;
-        padding: 0 1.5rem;
-      }
+      .sidebar { display: none; }
+      .content-area { margin-left: 0; padding: 2rem 1.5rem 6rem 1.5rem; }
+      .nav-bar { left: 0; padding: 0 1.5rem; }
     }
   </style>
 </head>
@@ -811,30 +695,26 @@
         </li>
         <li class="step-item" onclick="goToStep(1)">
           <span class="step-number">2</span>
-          <span class="step-title">Query ECR via SSM</span>
+          <span class="step-title">Platform Provisioning (Reference)</span>
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
-          <span class="step-title">Build Custom EMR Image</span>
+          <span class="step-title">Configure Lab Credentials</span>
         </li>
         <li class="step-item" onclick="goToStep(3)">
           <span class="step-number">4</span>
-          <span class="step-title">Authenticate & Push ECR</span>
+          <span class="step-title">Build & Push EMR Image</span>
         </li>
         <li class="step-item" onclick="goToStep(4)">
           <span class="step-number">5</span>
-          <span class="step-title">Discover Virtual Cluster & Roles</span>
+          <span class="step-title">Submit & Monitor EMR Job</span>
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
-          <span class="step-title">Execute & Monitor EMR Job</span>
+          <span class="step-title">Knowledge Quiz</span>
         </li>
         <li class="step-item" onclick="goToStep(6)">
           <span class="step-number">7</span>
-          <span class="step-title">Knowledge Quiz</span>
-        </li>
-        <li class="step-item" onclick="goToStep(7)">
-          <span class="step-number">8</span>
           <span class="step-title">Completion Certificate</span>
         </li>
       </ul>
@@ -848,85 +728,90 @@
            ==================================================================== -->
       <section class="content-panel active" id="panel-0">
         <h1>Module 1: Overview & Architecture</h1>
-        <p class="subtitle">Managed Serverless Apache Spark Runtime Orchestration on Amazon EKS.</p>
+        <p class="subtitle">Serverless Apache Spark Workload Orchestration via Amazon EMR on EKS.</p>
 
-        <div class="callout callout-purple">
-          <div class="callout-title">💡 Learning Objective</div>
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Important: Platform Team Provisioning vs. Data Engineer Role</div>
           <div class="callout-content">
-            <p>Deploy containerized PySpark applications using <b>Amazon EMR on EKS</b>. Learn how to query <b>AWS Systems Manager (SSM) Parameter Store</b> to discover ECR repository endpoints dynamically, build custom container images on EMR base runtimes (`public.ecr.aws/emr-on-eks/spark/emr-6.10.0:latest`), push images to Amazon ECR, and execute serverless Spark jobs targeting Amazon EMR Virtual Clusters.</p>
+            <p>In enterprise production environments, the <b>EMR Virtual Cluster</b> and <b>IAM Execution Role</b> are created and managed by the <b>Platform / Cloud Infrastructure Team</b>.</p>
+            <p style="margin-top: 0.5rem;">As a <b>Data Engineer</b>, you will receive these pre-created details (Cluster ID, Execution Role ARN, and ECR Repository URL) to submit your Spark applications to EKS via EMR on EKS!</p>
+          </div>
+        </div>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">☁️ AWS CloudShell Support</div>
+          <div class="callout-content">
+            <p>You can run <code>docker build</code> and <code>docker push</code> on your local workstation (or CloudShell with ECR push). Once the image is pushed to ECR, you can run <b>100% of job submission and pod monitoring commands directly in AWS CloudShell</b> without needing local tools!</p>
           </div>
         </div>
 
         <h2>EMR on EKS Orchestration Workflow</h2>
-        <!-- High-Contrast Vector EMR on EKS Diagram -->
         <svg class="tech-illustration" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
           <line x1="20" y1="0" x2="20" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="120" y1="0" x2="120" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="220" y1="0" x2="220" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
           <line x1="320" y1="0" x2="320" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
 
-          <!-- SSM Parameter Store -->
-          <rect x="15" y="35" width="110" height="75" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
-          <rect x="15" y="35" width="110" height="20" rx="8" fill="#f1f5f9" />
-          <text x="23" y="48" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">SSM PARAMETER STORE</text>
-          <text x="23" y="70" font-family="JetBrains Mono, monospace" font-size="7" fill="#2563eb">/platform/dev/ecr</text>
+          <!-- Provided Credentials Card -->
+          <rect x="15" y="35" width="115" height="180" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <rect x="15" y="35" width="115" height="20" rx="8" fill="#f1f5f9" />
+          <text x="23" y="48" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">PROVIDED LAB DETAILS</text>
+          
+          <rect x="23" y="65" width="98" height="35" rx="4" fill="rgba(124, 58, 237, 0.1)" stroke="#7c3aed" stroke-width="1" />
+          <text x="28" y="80" font-family="JetBrains Mono, monospace" font-size="7" font-weight="600" fill="#7c3aed">VIRTUAL_CLUSTER_ID</text>
+          <text x="28" y="92" font-family="Inter, sans-serif" font-size="6.5" fill="#475569">EMR Virtual Cluster</text>
 
-          <!-- Arrow: SSM -> Docker Build -->
-          <path d="M125 72 H160" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="4 2" />
-          <path d="M156 68 L163 72 L156 76 Z" fill="#2563eb" />
+          <rect x="23" y="110" width="98" height="35" rx="4" fill="rgba(234, 88, 12, 0.1)" stroke="#ea580c" stroke-width="1" />
+          <text x="28" y="125" font-family="JetBrains Mono, monospace" font-size="7" font-weight="600" fill="#ea580c">ECR_REPO_URL</text>
+          <text x="28" y="137" font-family="Inter, sans-serif" font-size="6.5" fill="#475569">Amazon ECR Repo</text>
+
+          <rect x="23" y="155" width="98" height="35" rx="4" fill="rgba(37, 99, 235, 0.1)" stroke="#2563eb" stroke-width="1" />
+          <text x="28" y="170" font-family="JetBrains Mono, monospace" font-size="7" font-weight="600" fill="#2563eb">EXECUTION_ROLE_ARN</text>
+          <text x="28" y="182" font-family="Inter, sans-serif" font-size="6.5" fill="#475569">IAM EMR Role</text>
 
           <!-- Amazon ECR Registry -->
-          <rect x="165" y="35" width="95" height="75" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
-          <text x="173" y="53" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#c2410c">AMAZON ECR</text>
-          <rect x="173" y="65" width="80" height="35" rx="4" fill="#ea580c" />
-          <text x="178" y="82" font-family="JetBrains Mono, monospace" font-size="7" font-weight="700" fill="#ffffff">spark-emr-eks</text>
+          <rect x="155" y="35" width="105" height="75" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="2" />
+          <text x="163" y="53" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#c2410c">AMAZON ECR</text>
+          <rect x="163" y="65" width="88" height="35" rx="4" fill="#ea580c" />
+          <text x="168" y="82" font-family="JetBrains Mono, monospace" font-size="7" font-weight="700" fill="#ffffff">spark-emr-eks:latest</text>
 
-          <!-- Arrow: ECR -> EMR Virtual Cluster -->
-          <path d="M260 72 H285" stroke="#ea580c" stroke-width="2.5" />
-          <path d="M281 68 L288 72 L281 76 Z" fill="#ea580c" />
+          <!-- EMR Virtual Cluster on EKS -->
+          <rect x="155" y="130" width="230" height="85" rx="8" fill="#0f172a" stroke="#94a3b8" stroke-width="2" />
+          <text x="163" y="146" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">AMAZON EMR VIRTUAL CLUSTER ON EKS</text>
 
-          <!-- EMR Virtual Cluster -->
-          <rect x="290" y="35" width="95" height="180" rx="8" fill="#0f172a" stroke="#94a3b8" stroke-width="2" />
-          <text x="298" y="53" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">EMR VIRTUAL CLUSTER</text>
-          
-          <rect x="298" y="70" width="80" height="45" rx="4" fill="rgba(124, 58, 237, 0.2)" stroke="#7c3aed" stroke-width="1" />
-          <text x="304" y="85" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#c084fc">emr-6.10.0</text>
-          <text x="304" y="100" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#94a3b8">start-job-run</text>
+          <rect x="163" y="158" width="95" height="42" rx="4" fill="rgba(124, 58, 237, 0.2)" stroke="#7c3aed" stroke-width="1" />
+          <text x="168" y="173" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#c084fc">spark-driver</text>
+          <text x="168" y="188" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#94a3b8">emr-6.10.0</text>
 
-          <rect x="298" y="130" width="80" height="45" rx="4" fill="rgba(5, 150, 105, 0.2)" stroke="#059669" stroke-width="1" />
-          <text x="304" y="145" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#34d399">EKS Pods</text>
-          <text x="304" y="160" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#94a3b8">user: hadoop</text>
+          <rect x="268" y="158" width="105" height="42" rx="4" fill="rgba(5, 150, 105, 0.2)" stroke="#059669" stroke-width="1" />
+          <text x="273" y="173" font-family="Inter, sans-serif" font-size="7.5" font-weight="700" fill="#34d399">spark-executors</text>
+          <text x="273" y="188" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#94a3b8">user: hadoop</text>
         </svg>
-
-        <div class="callout callout-amber">
-          <div class="callout-title">🔑 AWS CLI Authentication Prerequisites</div>
-          <div class="callout-content">
-            <p>If you receive <code>UnrecognizedClientException: The security token included in the request is invalid</code>, re-authenticate your active terminal:</p>
-            <ul class="bullet-list" style="margin-top: 0.5rem; margin-bottom: 0;">
-              <td><b>Standard IAM User</b>: Run <code>aws configure</code> and supply Access Key ID & Secret Access Key.</td>
-              <td><b>Temporary Session Tokens (AWS Academy / Sandbox)</b>: Export <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, and <code>AWS_SESSION_TOKEN</code> in your terminal.</td>
-              <td><b>AWS IAM Identity Center (SSO)</b>: Execute <code>aws sso login</code>.</td>
-            </ul>
-          </div>
-        </div>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t0_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Review EMR on EKS Architecture</span>
-              <span class="task-desc">Understand SSM Parameter Store parameter lookups, EMR base container runtimes, and Virtual Cluster job submission.</span>
+              <span class="task-label">Review Architecture & Responsibilities</span>
+              <span class="task-desc">Understand how the Platform Team provisions infrastructure while Data Engineers build images and execute Spark workloads.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 2 (PANEL 1): QUERY ECR VIA SSM
+           MODULE 2 (PANEL 1): PLATFORM PROVISIONING (REFERENCE STEP)
            ==================================================================== -->
       <section class="content-panel" id="panel-1">
-        <h1>Module 2: Query ECR via SSM Parameter Store</h1>
-        <p class="subtitle">Fetching pre-configured ECR repository URLs dynamically.</p>
+        <h1>Module 2: Platform Provisioning (Reference)</h1>
+        <p class="subtitle">Understanding how the Platform Team creates EMR Virtual Clusters and IAM Execution Roles.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Platform Team Warning Callout</div>
+          <div class="callout-content">
+            <p><b>Note for Data Engineers:</b> The commands below are performed by your <b>Platform / DevOps Team</b> during initial infrastructure setup. In this lab, these resources are pre-provisioned for you. Review this step to understand how your Virtual Cluster and IAM Role are configured under the hood!</p>
+          </div>
+        </div>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -934,27 +819,108 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>Execute SSM CLI Query</h2>
+        <h2>1. Create Kubernetes Namespace `spark-emr` (Platform Task)</h2>
+        <p>Before linking EMR to EKS, the Platform Team creates a designated Kubernetes namespace for Spark workloads.</p>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">create</span> <span class="token-variable">namespace</span> <span class="token-string">spark-emr</span></code></pre>
+        </div>
+
+        <h2>2. Create IAM Job Execution Role (Platform Task)</h2>
+        <p>The Platform Team creates an IAM Role for EMR with trust policies allowing <code>emr-containers.amazonaws.com</code> to assume the role and access S3 data.</p>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Query SSM Parameter and store in a PowerShell variable</span>
-<span class="token-variable">$ECR_REPO_URL</span> = (<span class="token-keyword">aws</span> <span class="token-variable">ssm</span> <span class="token-function">get-parameter</span> --name <span class="token-string">"/platform/dev/ecr_repository_url"</span> --query <span class="token-string">"Parameter.Value"</span> --output <span class="token-string">text</span>)
+            <pre class="code-content"><code><span class="token-comment"># Define IAM Trust Policy JSON</span>
+<span class="token-variable">$TrustPolicy</span> = <span class="token-string">'{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "emr-containers.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}'</span>
 
-<span class="token-comment"># Print the value to verify</span>
-<span class="token-keyword">Write-Host</span> <span class="token-string">"ECR Repo URL: $ECR_REPO_URL"</span></code></pre>
+<span class="token-comment"># Create IAM Execution Role</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">create-role</span> --role-name <span class="token-string">EMRJobExecutionRole</span> --assume-role-policy-document <span class="token-variable">$TrustPolicy</span>
+
+<span class="token-comment"># Attach S3 Access Policy</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">attach-role-policy</span> --role-name <span class="token-string">EMRJobExecutionRole</span> --policy-arn <span class="token-string">arn:aws:iam::aws:policy/AmazonS3FullAccess</span></code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Query SSM Parameter and store in a Shell variable</span>
-<span class="token-keyword">ECR_REPO_URL</span>=$(aws ssm get-parameter --name "/platform/dev/ecr_repository_url" --query "Parameter.Value" --output text)
+            <pre class="code-content"><code><span class="token-comment"># Create IAM Execution Role</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">create-role</span> --role-name <span class="token-string">EMRJobExecutionRole</span> --assume-role-policy-document <span class="token-string">'{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "emr-containers.amazonaws.com" },
+    "Action": "sts:AssumeRole"
+  }]
+}'</span>
 
-<span class="token-comment"># Print the value to verify</span>
-<span class="token-keyword">echo</span> <span class="token-string">"ECR Repo URL: $ECR_REPO_URL"</span></code></pre>
+<span class="token-comment"># Attach S3 Access Policy</span>
+<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">attach-role-policy</span> --role-name <span class="token-string">EMRJobExecutionRole</span> --policy-arn <span class="token-string">arn:aws:iam::aws:policy/AmazonS3FullAccess</span></code></pre>
+          </div>
+        </div>
+
+        <h2>3. Create EMR Virtual Cluster on EKS (Platform Task)</h2>
+        <p>The Platform Team links an EKS namespace to Amazon EMR by creating an EMR Virtual Cluster mapping.</p>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">create-virtual-cluster</span> `
+  --name <span class="token-string">"spark-emr-vc"</span> `
+  --container-provider <span class="token-string">"{
+    `"id`": `"spark-eks-cluster`",
+    `"type`": `"EKS`",
+    `"info`": {
+      `"eksInfo`": { `"namespace`": `"spark-emr`" }
+    }
+  }"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">create-virtual-cluster</span> \
+  --name <span class="token-string">"spark-emr-vc"</span> \
+  --container-provider <span class="token-string">'{
+    "id": "spark-eks-cluster",
+    "type": "EKS",
+    "info": {
+      "eksInfo": { "namespace": "spark-emr" }
+    }
+  }'</span></code></pre>
+          </div>
+        </div>
+
+        <h2>4. Check Execution Role & Retrieve ARN</h2>
+        <p>Verify that the IAM Execution Role exists and fetch its exact Amazon Resource Name (ARN):</p>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Query IAM Role and fetch ARN</span>
+<span class="token-variable">$EXECUTION_ROLE_ARN</span> = (<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">get-role</span> --role-name <span class="token-string">EMRJobExecutionRole</span> --query <span class="token-string">"Role.Arn"</span> --output <span class="token-string">text</span>)
+<span class="token-keyword">Write-Host</span> <span class="token-string">"Execution Role ARN: $EXECUTION_ROLE_ARN"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Query IAM Role and fetch ARN</span>
+<span class="token-variable">EXECUTION_ROLE_ARN</span>=$(aws iam get-role --role-name EMRJobExecutionRole --query "Role.Arn" --output text)
+<span class="token-keyword">echo</span> <span class="token-string">"Execution Role ARN: $EXECUTION_ROLE_ARN"</span></code></pre>
           </div>
         </div>
 
@@ -962,40 +928,134 @@
           <li class="task-checkbox-container" data-task-id="t1_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Query SSM Parameter Store</span>
-              <span class="task-desc">Verify that `$ECR_REPO_URL` prints `<account_id>.dkr.ecr.<region>.amazonaws.com/<repo_name>`.</span>
+              <span class="task-label">Understand Platform Provisioning</span>
+              <span class="task-desc">Recognize how the Platform Team maps EMR Virtual Clusters to EKS namespaces and configures IAM roles.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 3 (PANEL 2): BUILD CUSTOM EMR IMAGE
+           MODULE 3 (PANEL 2): CONFIGURE ENVIRONMENT VARIABLES
            ==================================================================== -->
       <section class="content-panel" id="panel-2">
-        <h1>Module 3: Build Custom EMR Runtime Image</h1>
-        <p class="subtitle">Packaging applications onto official AWS EMR on EKS base container runtimes.</p>
+        <h1>Module 3: Configure Environment Variables & Connect</h1>
+        <p class="subtitle">Setting your provided EMR Virtual Cluster ID, ECR Repo URL, and Execution Role ARN.</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+          <button class="os-tab-btn" data-os="cloudshell" onclick="switchOsTab('cloudshell')">☁️ AWS CloudShell</button>
+        </div>
+
+        <h2>1. Configure Environment Variables</h2>
+        <p>Set the environment variables using the exact values provided by your instructor/platform team:</p>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-variable">$env:AWS_REGION</span> = <span class="token-string">"us-west-2"</span>
+<span class="token-comment"># Replace with your provided Virtual Cluster ID</span>
+<span class="token-variable">$env:VIRTUAL_CLUSTER_ID</span> = <span class="token-string">"abc123def456ghi789"</span>
+
+<span class="token-comment"># Replace with your provided ECR Repository URL</span>
+<span class="token-variable">$env:ECR_REPO_URL</span> = <span class="token-string">"786461327180.dkr.ecr.us-west-2.amazonaws.com/spark-emr-eks"</span>
+
+<span class="token-comment"># Replace with your provided EMR Execution Role ARN</span>
+<span class="token-variable">$env:EXECUTION_ROLE_ARN</span> = <span class="token-string">"arn:aws:iam::786461327180:role/EMRJobExecutionRole"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
+<span class="token-comment"># Replace with your provided Virtual Cluster ID</span>
+<span class="token-keyword">export</span> <span class="token-variable">VIRTUAL_CLUSTER_ID</span>=<span class="token-string">"abc123def456ghi789"</span>
+
+<span class="token-comment"># Replace with your provided ECR Repository URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">ECR_REPO_URL</span>=<span class="token-string">"786461327180.dkr.ecr.us-west-2.amazonaws.com/spark-emr-eks"</span>
+
+<span class="token-comment"># Replace with your provided EMR Execution Role ARN</span>
+<span class="token-keyword">export</span> <span class="token-variable">EXECUTION_ROLE_ARN</span>=<span class="token-string">"arn:aws:iam::786461327180:role/EMRJobExecutionRole"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">AWS_REGION</span>=<span class="token-string">"us-west-2"</span>
+<span class="token-comment"># Replace with your provided Virtual Cluster ID</span>
+<span class="token-keyword">export</span> <span class="token-variable">VIRTUAL_CLUSTER_ID</span>=<span class="token-string">"abc123def456ghi789"</span>
+
+<span class="token-comment"># Replace with your provided ECR Repository URL</span>
+<span class="token-keyword">export</span> <span class="token-variable">ECR_REPO_URL</span>=<span class="token-string">"786461327180.dkr.ecr.us-west-2.amazonaws.com/spark-emr-eks"</span>
+
+<span class="token-comment"># Replace with your provided EMR Execution Role ARN</span>
+<span class="token-keyword">export</span> <span class="token-variable">EXECUTION_ROLE_ARN</span>=<span class="token-string">"arn:aws:iam::786461327180:role/EMRJobExecutionRole"</span></code></pre>
+          </div>
+        </div>
+
+        <h2>2. Connect kubectl to Existing EKS Cluster</h2>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-variable">$env:AWS_REGION</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-variable">$AWS_REGION</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">eks</span> <span class="token-function">update-kubeconfig</span> --name <span class="token-string">spark-eks-cluster</span> --region <span class="token-variable">$AWS_REGION</span></code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Configure Lab Credentials</span>
+              <span class="task-desc">Set `$VIRTUAL_CLUSTER_ID`, `$ECR_REPO_URL`, `$EXECUTION_ROLE_ARN`, and connect `kubectl`.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 4 (PANEL 3): BUILD & PUSH EMR IMAGE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Build & Push Custom EMR Image</h1>
+        <p class="subtitle">Building Spark container image on official EMR base runtime and pushing to your ECR repo.</p>
 
         <h2>1. Explore Dockerfile (`app/Dockerfile`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-comment"># Start from the official EMR on EKS base runtime image (version 6.10.0)</span>
+          <pre class="code-content"><code><span class="token-comment"># Official Amazon EMR on EKS base runtime image (version 6.10.0)</span>
 <span class="token-keyword">FROM</span> <span class="token-variable">public.ecr.aws/emr-on-eks/spark/emr-6.10.0:latest</span>
 
-<span class="token-comment"># Switch to root to perform file administration operations</span>
+<span class="token-comment"># Switch to root for administration</span>
 <span class="token-keyword">USER</span> <span class="token-variable">root</span>
-
 <span class="token-keyword">RUN</span> <span class="token-string">mkdir -p /opt/spark/work-dir</span>
 
 <span class="token-keyword">COPY</span> <span class="token-string">spark_app.py /opt/spark/work-dir/spark_app.py</span>
 <span class="token-keyword">COPY</span> <span class="token-string">sample_data.csv /opt/spark/work-dir/sample_data.csv</span>
 
-<span class="token-comment"># Assign permissions back to the default EMR container user (hadoop: UID 1000)</span>
+<span class="token-comment"># Assign permissions to default EMR user (hadoop: UID 1000)</span>
 <span class="token-keyword">RUN</span> <span class="token-string">chown -R hadoop:hadoop /opt/spark/work-dir</span>
 
-<span class="token-comment"># Switch back to non-root execution user</span>
+<span class="token-comment"># Switch to non-root execution user</span>
 <span class="token-keyword">USER</span> <span class="token-variable">hadoop</span>
-
 <span class="token-keyword">WORKDIR</span> <span class="token-string">/opt/spark/work-dir</span></code></pre>
         </div>
 
@@ -1005,88 +1065,52 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>2. Build Image</h2>
+        <h2>2. Build x86_64 Image</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">d:\trainings\aws_data_engineering\spark_on_emr_eks_new\app</span>
-<span class="token-keyword">docker</span> <span class="token-function">build</span> -t <span class="token-variable">spark-emr-eks:latest</span> .</code></pre>
+            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">d:\trainings\aws_data_engineering\Lab9_spark_on_emr_eks\app</span>
+<span class="token-keyword">docker</span> <span class="token-function">build</span> --platform <span class="token-string">linux/amd64</span> -t <span class="token-variable">spark-emr-eks:latest</span> .</code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">~/trainings/aws_data_engineering/spark_on_emr_eks_new/app</span>
-<span class="token-keyword">docker</span> <span class="token-function">build</span> -t <span class="token-variable">spark-emr-eks:latest</span> .</code></pre>
+            <pre class="code-content"><code><span class="token-keyword">cd</span> <span class="token-string">~/trainings/aws_data_engineering/Lab9_spark_on_emr_eks/app</span>
+<span class="token-keyword">docker</span> <span class="token-function">build</span> --platform <span class="token-string">linux/amd64</span> -t <span class="token-variable">spark-emr-eks:latest</span> .</code></pre>
           </div>
         </div>
 
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t2_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Build Custom EMR Image</span>
-              <span class="task-desc">Compile Dockerfile using `public.ecr.aws/emr-on-eks/spark/emr-6.10.0:latest` and non-root `hadoop` user.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 4 (PANEL 3): AUTHENTICATE & PUSH ECR
-           ==================================================================== -->
-      <section class="content-panel" id="panel-3">
-        <h1>Module 4: Authenticate & Push to ECR</h1>
-        <p class="subtitle">Logging in Docker daemon to Amazon ECR and pushing the custom image.</p>
-
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <h2>1. Authenticate Docker CLI to ECR</h2>
+        <h2>3. Authenticate Docker CLI & Push to ECR Repo</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Parse ECR registry base domain and AWS region</span>
-<span class="token-variable">$RegistryUrl</span> = <span class="token-variable">$ECR_REPO_URL</span>.<span class="token-function">Split</span>(<span class="token-string">"/"</span>)[0]
-<span class="token-variable">$AwsRegion</span> = <span class="token-variable">$ECR_REPO_URL</span>.<span class="token-function">Split</span>(<span class="token-string">"."</span>)[3]
+            <pre class="code-content"><code><span class="token-comment"># Extract base registry domain from ECR_REPO_URL</span>
+<span class="token-variable">$RegistryUrl</span> = <span class="token-variable">$env:ECR_REPO_URL</span>.<span class="token-function">Split</span>(<span class="token-string">"/"</span>)[0]
 
 <span class="token-comment"># Authenticate Docker CLI</span>
-<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AwsRegion</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$RegistryUrl</span></code></pre>
+<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$env:AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$RegistryUrl</span>
+
+<span class="token-comment"># Tag and Push image</span>
+<span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">spark-emr-eks:latest</span> <span class="token-string">"$env:ECR_REPO_URL:latest"</span>
+<span class="token-keyword">docker</span> <span class="token-function">push</span> <span class="token-string">"$env:ECR_REPO_URL:latest"</span></code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Parse ECR registry base domain and AWS region</span>
+            <pre class="code-content"><code><span class="token-comment"># Extract base registry domain from ECR_REPO_URL</span>
 <span class="token-variable">RegistryUrl</span>=$(echo $ECR_REPO_URL | cut -d'/' -f1)
-<span class="token-variable">AwsRegion</span>=$(echo $ECR_REPO_URL | cut -d'.' -f4)
 
 <span class="token-comment"># Authenticate Docker CLI</span>
-<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AwsRegion</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$RegistryUrl</span></code></pre>
-          </div>
-        </div>
+<span class="token-keyword">aws</span> <span class="token-variable">ecr</span> <span class="token-function">get-login-password</span> --region <span class="token-variable">$AWS_REGION</span> | <span class="token-keyword">docker</span> <span class="token-function">login</span> --username <span class="token-string">AWS</span> --password-stdin <span class="token-variable">$RegistryUrl</span>
 
-        <h2>2. Tag and Push Image</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">spark-emr-eks:latest</span> <span class="token-string">"$ECR_REPO_URL:latest"</span>
-<span class="token-keyword">docker</span> <span class="token-function">push</span> <span class="token-string">"$ECR_REPO_URL:latest"</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">spark-emr-eks:latest</span> <span class="token-string">"$ECR_REPO_URL:latest"</span>
+<span class="token-comment"># Tag and Push image</span>
+<span class="token-keyword">docker</span> <span class="token-function">tag</span> <span class="token-variable">spark-emr-eks:latest</span> <span class="token-string">"$ECR_REPO_URL:latest"</span>
 <span class="token-keyword">docker</span> <span class="token-function">push</span> <span class="token-string">"$ECR_REPO_URL:latest"</span></code></pre>
           </div>
         </div>
@@ -1095,101 +1119,41 @@
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Authenticate & Push to ECR</span>
-              <span class="task-desc">Verify `Login Succeeded` feedback and push `$ECR_REPO_URL:latest` to Amazon ECR.</span>
+              <span class="task-label">Build & Push EMR Container Image</span>
+              <span class="task-desc">Build image using `public.ecr.aws/emr-on-eks/spark/emr-6.10.0:latest` base and push `$ECR_REPO_URL:latest` to ECR.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 5 (PANEL 4): DISCOVER VIRTUAL CLUSTER & ROLES
+           MODULE 5 (PANEL 4): SUBMIT & MONITOR EMR JOB
            ==================================================================== -->
       <section class="content-panel" id="panel-4">
-        <h1>Module 5: Discover Virtual Cluster & Roles</h1>
-        <p class="subtitle">Locating active EMR Virtual Cluster IDs and IAM Execution Role ARNs.</p>
+        <h1>Module 5: Submit & Monitor EMR Job</h1>
+        <p class="subtitle">Submitting containerized PySpark jobs to Amazon EMR Virtual Cluster via CLI.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
           <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+          <button class="os-tab-btn" data-os="cloudshell" onclick="switchOsTab('cloudshell')">☁️ AWS CloudShell</button>
         </div>
 
-        <h2>1. Retrieve Virtual Cluster ID</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">$VIRTUAL_CLUSTER_ID</span> = (<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">list-virtual-clusters</span> --query <span class="token-string">"virtualClusters[?state=='RUNNING'].id"</span> --output <span class="token-string">text</span>)
-<span class="token-keyword">Write-Host</span> <span class="token-string">"Virtual Cluster ID: $VIRTUAL_CLUSTER_ID"</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">VIRTUAL_CLUSTER_ID</span>=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?state=='RUNNING'].id" --output text)
-<span class="token-keyword">echo</span> <span class="token-string">"Virtual Cluster ID: $VIRTUAL_CLUSTER_ID"</span></code></pre>
-          </div>
-        </div>
-
-        <h2>2. Retrieve Execution Role ARN</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">$EXECUTION_ROLE_ARN</span> = (<span class="token-keyword">aws</span> <span class="token-variable">iam</span> <span class="token-function">list-roles</span> --query <span class="token-string">"Roles[?contains(RoleName, 'EMRJobExecution')].Arn"</span> --output <span class="token-string">text</span>)
-<span class="token-keyword">Write-Host</span> <span class="token-string">"Execution Role ARN: $EXECUTION_ROLE_ARN"</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">EXECUTION_ROLE_ARN</span>=$(aws iam list-roles --query "Roles[?contains(RoleName, 'EMRJobExecution')].Arn" --output text)
-<span class="token-keyword">echo</span> <span class="token-string">"Execution Role ARN: $EXECUTION_ROLE_ARN"</span></code></pre>
-          </div>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t4_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Discover EMR Virtual Cluster & Role ARN</span>
-              <span class="task-desc">Query active Virtual Cluster ID and IAM `EMRJobExecution` role ARN.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 6 (PANEL 5): EXECUTE & MONITOR EMR JOB
-           ==================================================================== -->
-      <section class="content-panel" id="panel-5">
-        <h1>Module 6: Execute & Monitor EMR Job</h1>
-        <p class="subtitle">Submitting containerized Spark jobs via aws emr-containers CLI.</p>
-
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <h2>1. Submit Spark Job Run</h2>
+        <h2>1. Submit Job Run (`aws emr-containers start-job-run`)</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">start-job-run</span> `
-  --virtual-cluster-id <span class="token-variable">$VIRTUAL_CLUSTER_ID</span> `
+  --virtual-cluster-id <span class="token-variable">$env:VIRTUAL_CLUSTER_ID</span> `
   --name <span class="token-string">"spark-emr-eks-job"</span> `
-  --execution-role-arn <span class="token-variable">$EXECUTION_ROLE_ARN</span> `
+  --execution-role-arn <span class="token-variable">$env:EXECUTION_ROLE_ARN</span> `
   --release-label <span class="token-string">"emr-6.10.0-latest"</span> `
   --job-driver <span class="token-string">"{
     `"sparkSubmitJobDriver`": {
       `"entryPoint`": `"local:///opt/spark/work-dir/spark_app.py`",
-      `"entryPointArguments`": [`"local:///opt/spark/work-dir/sample_data.csv`"],
-      `"sparkSubmitParameters`": `"--conf spark.kubernetes.container.image=$ECR_REPO_URL:latest --conf spark.executor.instances=2`"
+      `"sparkSubmitParameters`": `"--conf spark.kubernetes.container.image=$env:ECR_REPO_URL:latest --conf spark.executor.instances=1 --conf spark.driver.memory=512m --conf spark.executor.memory=512m`"
     }
   }"</span></code></pre>
           </div>
@@ -1206,8 +1170,24 @@
   --job-driver <span class="token-string">'{
     "sparkSubmitJobDriver": {
       "entryPoint": "local:///opt/spark/work-dir/spark_app.py",
-      "entryPointArguments": ["local:///opt/spark/work-dir/sample_data.csv"],
-      "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$ECR_REPO_URL"':latest --conf spark.executor.instances=2"
+      "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$ECR_REPO_URL"':latest --conf spark.executor.instances=1 --conf spark.driver.memory=512m --conf spark.executor.memory=512m"
+    }
+  }'</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">start-job-run</span> \
+  --virtual-cluster-id <span class="token-variable">$VIRTUAL_CLUSTER_ID</span> \
+  --name <span class="token-string">"spark-emr-eks-job"</span> \
+  --execution-role-arn <span class="token-variable">$EXECUTION_ROLE_ARN</span> \
+  --release-label <span class="token-string">"emr-6.10.0-latest"</span> \
+  --job-driver <span class="token-string">'{
+    "sparkSubmitJobDriver": {
+      "entryPoint": "local:///opt/spark/work-dir/spark_app.py",
+      "sparkSubmitParameters": "--conf spark.kubernetes.container.image='"$ECR_REPO_URL"':latest --conf spark.executor.instances=1 --conf spark.driver.memory=512m --conf spark.executor.memory=512m"
     }
   }'</span></code></pre>
           </div>
@@ -1218,67 +1198,79 @@
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">$JOB_ID</span> = <span class="token-string">"&lt;YOUR_JOB_ID_FROM_ABOVE&gt;"</span>
-<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">describe-job-run</span> --virtual-cluster-id <span class="token-variable">$VIRTUAL_CLUSTER_ID</span> --id <span class="token-variable">$JOB_ID</span></code></pre>
+            <pre class="code-content"><code><span class="token-variable">$env:JOB_ID</span> = <span class="token-string">"&lt;YOUR_JOB_ID_FROM_ABOVE_OUTPUT&gt;"</span>
+<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">describe-job-run</span> --virtual-cluster-id <span class="token-variable">$env:VIRTUAL_CLUSTER_ID</span> --id <span class="token-variable">$env:JOB_ID</span></code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">JOB_ID</span>=<span class="token-string">"&lt;YOUR_JOB_ID_FROM_ABOVE&gt;"</span>
+            <pre class="code-content"><code><span class="token-variable">JOB_ID</span>=<span class="token-string">"&lt;YOUR_JOB_ID_FROM_ABOVE_OUTPUT&gt;"</span>
 <span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">describe-job-run</span> --virtual-cluster-id <span class="token-variable">$VIRTUAL_CLUSTER_ID</span> --id <span class="token-variable">$JOB_ID</span></code></pre>
           </div>
         </div>
 
-        <h2>3. View EKS Pod Orchestration</h2>
+        <div class="os-content" data-os="cloudshell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">AWS CloudShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-variable">JOB_ID</span>=<span class="token-string">"&lt;YOUR_JOB_ID_FROM_ABOVE_OUTPUT&gt;"</span>
+<span class="token-keyword">aws</span> <span class="token-variable">emr-containers</span> <span class="token-function">describe-job-run</span> --virtual-cluster-id <span class="token-variable">$VIRTUAL_CLUSTER_ID</span> --id <span class="token-variable">$JOB_ID</span></code></pre>
+          </div>
+        </div>
+
+        <h2>3. Monitor EKS Pod Orchestration & Logs</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-variable">&lt;EMR_NAMESPACE&gt;</span></code></pre>
+          <pre class="code-content"><code><span class="token-comment"># List running pods in the EMR Virtual Cluster namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -A
+
+<span class="token-comment"># Stream logs from driver pod once running</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">logs</span> -n <span class="token-variable">&lt;EMR_NAMESPACE&gt;</span> <span class="token-variable">&lt;DRIVER_POD_NAME&gt;</span> -f</code></pre>
         </div>
 
         <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t5_1">
+          <li class="task-checkbox-container" data-task-id="t4_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Execute & Monitor EMR Job</span>
-              <span class="task-desc">Submit job run via `aws emr-containers start-job-run` and monitor state until `COMPLETED`.</span>
+              <span class="task-desc">Submit job run via `aws emr-containers start-job-run` targeting your `$ECR_REPO_URL:latest` image and monitor state until `COMPLETED`.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 7 (PANEL 6): KNOWLEDGE ASSESSMENT QUIZ
+           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
            ==================================================================== -->
-      <section class="content-panel" id="panel-6">
-        <h1>Module 7: Knowledge Assessment</h1>
-        <p class="subtitle">Test your understanding of Amazon EMR on EKS and container runtimes.</p>
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Amazon EMR Virtual Clusters and EKS orchestration.</p>
 
         <div class="quiz-card">
-          <div class="quiz-question">1. What primary architectural benefit does Amazon EMR on EKS provide over standalone EKS deployments?</div>
+          <div class="quiz-question">1. Who typically creates the EMR Virtual Cluster and IAM Execution Role in enterprise production environments?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) Managed serverless Spark runtime optimization, pre-tuned performance binaries, and Virtual Cluster lifecycle abstraction</div>
-            <div class="quiz-option" data-correct="false">B) Automatically converts Python scripts into Java bytecode</div>
-            <div class="quiz-option" data-correct="false">C) Replaces Kubernetes with Docker Swarm</div>
+            <div class="quiz-option" data-correct="true">A) The Platform / Cloud Infrastructure Team</div>
+            <div class="quiz-option" data-correct="false">B) Business Analysts</div>
+            <div class="quiz-option" data-correct="false">C) End Users browsing web apps</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">2. Which default non-root user execution account is used by official EMR on EKS base container images?</div>
+          <div class="quiz-question">2. What base container image is used when building custom PySpark application images for Amazon EMR on EKS?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) `hadoop` (UID 1000)</div>
-            <div class="quiz-option" data-correct="false">B) `root` (UID 0)</div>
-            <div class="quiz-option" data-correct="false">C) `spark` (UID 185)</div>
+            <div class="quiz-option" data-correct="true">A) Official AWS EMR base runtime (e.g. `public.ecr.aws/emr-on-eks/spark/emr-6.10.0:latest`)</div>
+            <div class="quiz-option" data-correct="false">B) Standard Ubuntu 22.04 LTS image</div>
+            <div class="quiz-option" data-correct="false">C) Alpine Linux python:3.9 image</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">3. Why do we query AWS Systems Manager (SSM) Parameter Store in Step 1?</div>
+          <div class="quiz-question">3. How does an Amazon EMR Virtual Cluster connect to an Amazon EKS cluster?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) To retrieve pre-configured infrastructure variables like `/platform/dev/ecr_repository_url` dynamically without hardcoding</div>
-            <div class="quiz-option" data-correct="false">B) To download PySpark source code</div>
-            <div class="quiz-option" data-correct="false">C) To restart EKS worker nodes</div>
+            <div class="quiz-option" data-correct="true">A) It maps logically to a specific Kubernetes namespace on the target EKS cluster</div>
+            <div class="quiz-option" data-correct="false">B) It provisions dedicated EC2 instances inside EC2 Classic</div>
+            <div class="quiz-option" data-correct="false">C) It requires SSH tunnels between master nodes</div>
           </div>
         </div>
 
@@ -1292,7 +1284,7 @@
         </div>
 
         <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t6_1">
+          <li class="task-checkbox-container" data-task-id="t5_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Complete Knowledge Check</span>
@@ -1303,17 +1295,17 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 8 (PANEL 7): COMPLETION CERTIFICATE
+           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
            ==================================================================== -->
-      <section class="content-panel" id="panel-7">
-        <h1>Module 8: Completion Certificate</h1>
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Completion Certificate</h1>
         <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
 
         <!-- Locked Card Message (shown when progress < 100%) -->
         <div class="callout callout-amber" id="certLockMessage">
           <div class="callout-title">🔒 Certificate Locked</div>
           <div class="callout-content">
-            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 7 to unlock your completion certificate!</p>
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
           </div>
         </div>
 
@@ -1343,7 +1335,7 @@
        ========================================================================== -->
   <script>
     let currentStep = 0;
-    const totalStepsCount = 8; // 8 total panels (0 to 7)
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
     let currentOs = 'powershell';
 
     // 1. Navigation Controller: goToStep(stepIndex)
@@ -1378,10 +1370,10 @@
 
       btnPrev.disabled = (currentStep === 0);
 
-      if (currentStep === 6) {
+      if (currentStep === 5) {
         btnNext.disabled = false;
         btnNext.innerText = 'Go to Certificate →';
-      } else if (currentStep === 7) {
+      } else if (currentStep === 6) {
         const containers = document.querySelectorAll('.task-checkbox-container');
         let checked = 0;
         containers.forEach(c => { if (c.classList.contains('checked')) checked++; });
@@ -1466,7 +1458,7 @@
         if (lockMsg) lockMsg.style.display = 'none';
         if (unlockedContainer) unlockedContainer.style.display = 'flex';
         if (certSubtitle) certSubtitle.innerText = 'Congratulations! Enter your name below to generate your official lab certificate.';
-        if (currentStep === 7) {
+        if (currentStep === 6) {
           if (btnNext) {
             btnNext.disabled = true;
             btnNext.innerText = 'Lab Completed 🎉';
@@ -1477,7 +1469,7 @@
         if (lockMsg) lockMsg.style.display = 'block';
         if (unlockedContainer) unlockedContainer.style.display = 'none';
         if (certSubtitle) certSubtitle.innerText = 'Complete 100% of the lab tasks to unlock your official certificate.';
-        if (currentStep === 7 && btnNext) {
+        if (currentStep === 6 && btnNext) {
           btnNext.disabled = true;
           btnNext.innerText = 'Complete All Tasks First 🔒';
         }
@@ -1588,26 +1580,23 @@
       // 7. Description Text
       ctx.fillStyle = '#334155';
       ctx.font = '14px "Inter", sans-serif';
-      ctx.fillText('For successfully building custom EMR runtime container images, querying AWS SSM,', canvas.width / 2, 252);
-      ctx.fillText('and orchestrating serverless Apache Spark workloads via Amazon EMR on EKS.', canvas.width / 2, 274);
+      ctx.fillText('For successfully building custom EMR runtime container images, pushing to Amazon ECR,', canvas.width / 2, 252);
+      ctx.fillText('and executing serverless Apache Spark workloads via Amazon EMR on EKS.', canvas.width / 2, 274);
 
       // 8. Official Seal / Badge (Bottom Center)
       const sealX = canvas.width / 2;
       const sealY = 385;
 
-      // Outer Gold Seal Ring
       ctx.fillStyle = '#d97706';
       ctx.beginPath();
       ctx.arc(sealX, sealY, 34, 0, Math.PI * 2);
       ctx.fill();
 
-      // Inner Purple Ring
       ctx.fillStyle = '#7c3aed';
       ctx.beginPath();
       ctx.arc(sealX, sealY, 28, 0, Math.PI * 2);
       ctx.fill();
 
-      // Center Gold Star
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 20px "Outfit", sans-serif';
       ctx.fillText('★', sealX, sealY + 7);
@@ -1632,13 +1621,10 @@
 
       // 10. Cursive Signature & Title (Bottom Right)
       ctx.textAlign = 'right';
-      
-      // Small Cursive Signature signed by "Navdeep Kaur"
       ctx.fillStyle = '#0f172a';
       ctx.font = '400 26px "Great Vibes", cursive';
       ctx.fillText('Navdeep Kaur', canvas.width - 65, 372);
 
-      // Signature Line
       ctx.strokeStyle = '#cbd5e1';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1646,7 +1632,6 @@
       ctx.lineTo(canvas.width - 65, 405);
       ctx.stroke();
 
-      // Printed Name & Title
       ctx.fillStyle = '#0f172a';
       ctx.font = '700 13px "Outfit", sans-serif';
       ctx.fillText('Navdeep Kaur', canvas.width - 65, 422);
@@ -1704,7 +1689,7 @@
       goToStep(0);
       if (document.fonts) {
         document.fonts.ready.then(() => {
-          if (currentStep === 7) generateCertificate();
+          if (currentStep === 6) generateCertificate();
         });
       }
     });

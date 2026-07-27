@@ -1,21 +1,8 @@
 #!/bin/bash
 # submit_spark_minikube.sh
-# Script to download Spark client binaries and submit the Spark application to local Minikube from macOS.
+# Script to download Spark client binaries and submit the in-memory Spark application to local Minikube from macOS.
 
 set -e
-
-# Parse arguments
-S3_BUCKET=""
-AWS_REGION="us-east-1"
-
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        -b|--bucket) S3_BUCKET="$2"; shift ;;
-        -r|--region) AWS_REGION="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
-    esac
-    shift
-done
 
 # Setup directories
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -108,37 +95,12 @@ ARGS=(
     "--name" "spark-on-minikube-job"
     "--conf" "spark.kubernetes.container.image=$IMAGE_URI"
     "--conf" "spark.kubernetes.authenticate.driver.serviceAccountName=spark"
-    "--conf" "spark.executor.instances=2"
+    "--conf" "spark.driver.memory=512m"
+    "--conf" "spark.executor.memory=512m"
+    "--conf" "spark.executor.instances=1"
     "--conf" "spark.kubernetes.driver.pod.name=spark-driver"
+    "local:///opt/spark/work-dir/spark_app.py"
 )
-
-if [ -n "$S3_BUCKET" ]; then
-    echo "Configuring job for S3 integration targeting bucket: $S3_BUCKET"
-    
-    # Retrieve credentials from local AWS configuration
-    ACCESS_KEY=$(aws configure get aws_access_key_id 2>/dev/null || true)
-    SECRET_KEY=$(aws configure get aws_secret_access_key 2>/dev/null || true)
-    
-    if [ -z "$ACCESS_KEY" ] || [ -z "$SECRET_KEY" ]; then
-        echo "ERROR: AWS credentials not found. Run 'aws configure' to set them up before running S3 jobs on Minikube." >&2
-        exit 1
-    fi
-    
-    ARGS+=(
-        "--conf" "spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
-        "--conf" "spark.hadoop.fs.s3a.access.key=$ACCESS_KEY"
-        "--conf" "spark.hadoop.fs.s3a.secret.key=$SECRET_KEY"
-        "local:///opt/spark/work-dir/spark_app.py"
-        "s3a://$S3_BUCKET/sample_data.csv"
-        "s3a://$S3_BUCKET/spark-output"
-    )
-else
-    echo "Running job using embedded container CSV data..."
-    ARGS+=(
-        "local:///opt/spark/work-dir/spark_app.py"
-        "local:///opt/spark/work-dir/sample_data.csv"
-    )
-fi
 
 # 5. Submit Spark Job
 echo -e "\n[5/5] Submitting Spark job to Minikube..."

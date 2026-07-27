@@ -1017,8 +1017,19 @@ grouped_df = df.groupBy("Category").sum("Amount")</code></pre>
         <p>Run the official pre-built container image directly from Docker Hub without needing to build locally:</p>
 
         <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Docker CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <div class="code-header"><span class="code-lang-badge">Docker CLI (Standard)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code>docker run --rm -it -p 8888:8888 -p 4040:4040 technoavengers/spark-jupyter-demo:latest</code></pre>
+        </div>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">🍏 MacBook / Apple Silicon (M1/M2/M3/M4) Users</div>
+          <div class="callout-content">
+            <p>If running on an Apple Silicon Mac, add <code>--platform linux/amd64</code> to enforce x86 emulation for Spark/JVM compatibility:</p>
+            <div class="code-block-container" style="margin-top: 0.5rem; margin-bottom: 0;">
+              <div class="code-header"><span class="code-lang-badge">macOS Apple Silicon Command</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre class="code-content"><code>docker run --platform linux/amd64 --rm -it -p 8888:8888 -p 4040:4040 technoavengers/spark-jupyter-demo:latest</code></pre>
+            </div>
+          </div>
         </div>
 
         <h2>Option B: Automated Local Script Launch</h2>

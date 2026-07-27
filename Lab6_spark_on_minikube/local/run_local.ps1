@@ -1,5 +1,5 @@
 # run_local.ps1
-# Script to build and test the Spark application container locally on Windows.
+# Script to build and test the Spark in-memory application container locally on Windows.
 
 $ErrorActionPreference = "Stop"
 
@@ -21,11 +21,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "`n==========================================" -ForegroundColor Cyan
-Write-Host "Running Spark Application Locally..." -ForegroundColor Cyan
+Write-Host "Running Spark In-Memory Application Locally..." -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
-# Run the spark-submit inside the container, passing the copied local CSV file as the input path argument
-docker run --rm -it spark-on-minikube:latest /opt/spark/bin/spark-submit /opt/spark/work-dir/spark_app.py /opt/spark/work-dir/sample_data.csv
+# Run spark-submit inside the container (in-memory DataFrame creation & transformations)
+docker run --rm -it spark-on-minikube:latest /opt/spark/bin/spark-submit /opt/spark/work-dir/spark_app.py
 
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "`nSpark execution completed with a non-zero exit code."
