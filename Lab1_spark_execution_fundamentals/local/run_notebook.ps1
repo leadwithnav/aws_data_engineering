@@ -8,6 +8,11 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppDir = Join-Path $ScriptDir "../app"
 
 Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "Pulling Base Image (apache/spark:3.5.1)..." -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+docker pull apache/spark:3.5.1
+
+Write-Host "`n==================================================" -ForegroundColor Cyan
 Write-Host "Building Spark Jupyter Notebook Image..." -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "Context path: $AppDir" -ForegroundColor Gray

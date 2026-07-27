@@ -9,6 +9,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 APP_DIR="$SCRIPT_DIR/../app"
 
 echo "=================================================="
+echo "Pulling Base Image (apache/spark:3.5.1)..."
+echo "=================================================="
+docker pull apache/spark:3.5.1
+
+echo -e "\n=================================================="
 echo "Building Spark Jupyter Notebook Image..."
 echo "=================================================="
 echo "Context path: $APP_DIR"
