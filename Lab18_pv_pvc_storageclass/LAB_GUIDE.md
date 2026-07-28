@@ -1,8 +1,8 @@
 # Lab Guide: Kubernetes Persistent Volumes (PV), PVCs, StorageClasses & PostgreSQL Data Persistence
 
-Welcome to **Lab 18: Kubernetes Storage Architecture — PersistentVolumes (PV), PersistentVolumeClaims (PVC), StorageClasses (SC), PostgreSQL Data Persistence Verification, and Spark Volume Integration**.
+Welcome to **Lab 18: Kubernetes Storage Architecture — PersistentVolumes (PV), PersistentVolumeClaims (PVC), Default StorageClasses (SC), PostgreSQL Data Persistence Verification, and Spark Volume Integration**.
 
-In containerized environments, containers are ephemeral by default. When a pod is deleted, its internal container file system is destroyed. This lab demonstrates how Kubernetes **PersistentVolumeClaims (PVCs)** attach persistent, non-ephemeral storage to pods, guaranteeing 100% data survival across pod crashes, upgrades, and manual pod deletions.
+In containerized environments, containers are ephemeral by default. When a pod is deleted, its internal container file system is destroyed. This lab demonstrates how Kubernetes **PersistentVolumeClaims (PVCs)** bind to the cluster's **Default StorageClass** to attach persistent, non-ephemeral storage to pods, guaranteeing 100% data survival across pod crashes, upgrades, and manual pod deletions.
 
 ---
 
@@ -11,8 +11,8 @@ In containerized environments, containers are ephemeral by default. When a pod i
 ```mermaid
 graph TD
     subgraph Kubernetes Storage Abstraction Layer
-        SC[StorageClass: standard / fast-storage] -->|Dynamic Provisioner| PV[PersistentVolume: HostPath / EBS]
-        PVC[PersistentVolumeClaim: postgres-pvc] -->|Binds to| PV
+        SC[Default StorageClass: standard / gp2] -->|Dynamic Provisioner| PV[PersistentVolume: HostPath / EBS]
+        PVC[PersistentVolumeClaim: postgres-pvc] -->|Binds to Default SC| PV
     end
 
     subgraph Workload Layer (PostgreSQL Pod)
@@ -31,43 +31,57 @@ graph TD
 
 | Storage Concept | Abstraction Level | Primary Function & Responsibility |
 | :--- | :--- | :--- |
-| **PersistentVolume (PV)** | Cluster Infrastructure | A piece of actual physical or cloud storage (AWS EBS, NFS, Local SSD, HostPath) provisioned by an administrator or dynamically by a StorageClass. |
-| **PersistentVolumeClaim (PVC)** | Developer Request | A request for storage by a user/workload. Specifies storage size (e.g. `1Gi`), access modes (`ReadWriteOnce`), and StorageClass. |
-| **StorageClass (SC)** | Provisioning Policy | Defines the "class" of storage (e.g. `gp3`, `io2`, `hostpath`) and enables **Dynamic Provisioning** so PVs are automatically created when a PVC is applied. |
+| **StorageClass (SC)** | Provisioning Policy | Pre-installed cluster policy (e.g. `standard (default)` in Minikube, `gp2` / `gp3` in EKS). Enables **Dynamic Provisioning**. |
+| **PersistentVolumeClaim (PVC)** | Developer Storage Request | Requests storage size (e.g. `1Gi`) and access mode (`ReadWriteOnce`). Omitting `storageClassName` automatically binds to the cluster default StorageClass. |
+| **PersistentVolume (PV)** | Cluster Infrastructure | Physical or cloud storage (AWS EBS, HostPath) dynamically created by the StorageClass when a PVC is applied. |
 
 ---
 
-## Step 1: Deploy StorageClass & PostgreSQL PVC
+## Step 1: Inspect Existing StorageClasses & Deploy PostgreSQL PVC
 
-### 1.1 Apply StorageClass Manifest (`manifests/storageclass.yaml`)
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: fast-storage
-provisioner: k8s.io/minikube-hostpath
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
+Before creating PVCs, inspect the existing StorageClasses configured in your Kubernetes cluster.
+
+### 1.1 Inspect Cluster StorageClasses
+Run `kubectl get storageclass` (or `kubectl get sc`) to find the default StorageClass marked with `(default)`:
+
+#### Windows (PowerShell) / macOS / Linux (Bash)
+```bash
+kubectl get storageclass
+```
+*Example Output (Minikube / EKS):*
+```text
+NAME                 PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+standard (default)   k8s.io/minikube-hostpath       Delete          Immediate           false                  5d
 ```
 
-### 1.2 Apply PostgreSQL PVC & Deployment (`manifests/postgres-pvc-deployment.yaml`)
+---
+
+### 1.2 PostgreSQL PVC & Deployment Manifest (`manifests/postgres-pvc-deployment.yaml`)
+
+> [!TIP]
+> **Automatic Default StorageClass Binding**: Notice that `storageClassName` is omitted from `postgres-pvc`. Kubernetes automatically assigns the cluster default StorageClass (`standard (default)`).
+
 ```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
+  namespace: default
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: standard
+  # Omit storageClassName to use cluster default StorageClass
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-db
+  namespace: default
+  labels:
+    app: postgres
 spec:
   replicas: 1
   selector:
@@ -81,6 +95,9 @@ spec:
       containers:
         - name: postgres
           image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
           env:
             - name: POSTGRES_DB
               value: "ecommerce_db"
@@ -99,29 +116,14 @@ spec:
             claimName: postgres-pvc
 ```
 
-### 1.3 Execution Commands
+### 1.3 Apply Manifests & Verify Binding
 
-#### Windows (PowerShell)
-```powershell
-# 1. Apply storage class & postgres deployment
-kubectl apply -f manifests/storageclass.yaml
-kubectl apply -f manifests/postgres-pvc-deployment.yaml
-
-# 2. Verify PVC status (BOUND) and PV creation
-kubectl get pvc
-kubectl get pv
-
-# 3. Verify running PostgreSQL pod
-kubectl get pods -l app=postgres
-```
-
-#### macOS / Linux (Bash/Zsh)
+#### Windows (PowerShell) / macOS / Linux (Bash)
 ```bash
-# 1. Apply storage class & postgres deployment
-kubectl apply -f manifests/storageclass.yaml
+# 1. Apply postgres deployment & PVC
 kubectl apply -f manifests/postgres-pvc-deployment.yaml
 
-# 2. Verify PVC status (BOUND) and PV creation
+# 2. Verify PVC status (BOUND to default StorageClass) and PV creation
 kubectl get pvc
 kubectl get pv
 

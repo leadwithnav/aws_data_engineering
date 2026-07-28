@@ -122,7 +122,6 @@ spec:
   containers:
     - name: demo-container
       image: nginx:alpine
-      imagePullPolicy: Never
       # 1. ConfigMap injected as Environment Variables via envFrom
       envFrom:
         - configMapRef:

@@ -746,7 +746,7 @@
         </li>
         <li class="step-item" onclick="goToStep(1)">
           <span class="step-number">2</span>
-          <span class="step-title">Deploy PVC & PostgreSQL</span>
+          <span class="step-title">Check StorageClass & Deploy PVC</span>
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
@@ -781,12 +781,12 @@
       <!-- STEP 0: OVERVIEW & ARCHITECTURE -->
       <section class="content-panel active" id="panel-0">
         <h1>Module 1: Overview & Storage Concepts</h1>
-        <p class="subtitle">Understand PersistentVolumes (PV), PersistentVolumeClaims (PVC), and StorageClasses (SC) in Kubernetes.</p>
+        <p class="subtitle">Understand PersistentVolumes (PV), PersistentVolumeClaims (PVC), and Default StorageClasses (SC) in Kubernetes.</p>
 
         <div class="callout callout-purple">
-          <div class="callout-title">💡 Non-Ephemeral Storage Architecture</div>
+          <div class="callout-title">💡 Default StorageClass Binding</div>
           <div class="callout-content">
-            Pods in Kubernetes are ephemeral by default. When a pod crashes or gets deleted, its container file system is destroyed. Attaching a <b>PersistentVolumeClaim (PVC)</b> to a pod mounts external storage (`/var/lib/postgresql/data`) that survives pod deletions and automatic controller recreations!
+            Instead of creating custom StorageClasses, Kubernetes clusters have a pre-configured <b>Default StorageClass</b> (e.g. <code>standard (default)</code> in Minikube, <code>gp2 / gp3</code> in AWS EKS). When a PVC omits the <code>storageClassName</code> field, Kubernetes automatically binds it to the cluster's Default StorageClass!
           </div>
         </div>
 
@@ -801,19 +801,19 @@
           </thead>
           <tbody>
             <tr>
-              <td><b>PersistentVolume (PV)</b></td>
-              <td>Cluster Storage Resource</td>
-              <td>Physical or cloud storage provisioned by admin or StorageClass.</td>
+              <td><b>StorageClass (SC)</b></td>
+              <td>Provisioning Policy</td>
+              <td>Pre-installed cluster policy. Enables <b>Dynamic Provisioning</b> of storage volumes.</td>
             </tr>
             <tr>
               <td><b>PersistentVolumeClaim (PVC)</b></td>
               <td>Developer Storage Request</td>
-              <td>Requests storage size (e.g. <code>1Gi</code>), access mode, and StorageClass.</td>
+              <td>Requests size (e.g. <code>1Gi</code>). Omitting <code>storageClassName</code> uses the cluster default SC.</td>
             </tr>
             <tr>
-              <td><b>StorageClass (SC)</b></td>
-              <td>Provisioning Policy</td>
-              <td>Enables <b>Dynamic Provisioning</b> so PVs are automatically created on demand.</td>
+              <td><b>PersistentVolume (PV)</b></td>
+              <td>Cluster Storage Resource</td>
+              <td>Physical or cloud storage (AWS EBS, HostPath) dynamically created when a PVC is applied.</td>
             </tr>
           </tbody>
         </table>
@@ -823,18 +823,25 @@
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Review Kubernetes Storage Abstraction Layer</span>
-              <span class="task-desc">Understand how PV, PVC, and StorageClass decouple workload definitions from physical storage infrastructure.</span>
+              <span class="task-desc">Understand how PV, PVC, and Default StorageClass decouple workload definitions from storage infrastructure.</span>
             </div>
           </li>
         </ul>
       </section>
 
-      <!-- STEP 1: DEPLOY PVC & POSTGRESQL -->
+      <!-- STEP 1: CHECK STORAGECLASS & DEPLOY PVC -->
       <section class="content-panel" id="panel-1">
-        <h1>Module 2: Deploy PVC & PostgreSQL Deployment</h1>
-        <p class="subtitle">Create StorageClass, PersistentVolumeClaim, and deploy PostgreSQL with mounted volume.</p>
+        <h1>Module 2: Check Existing StorageClasses & Deploy PVC</h1>
+        <p class="subtitle">Inspect pre-existing cluster StorageClasses and deploy PostgreSQL using the cluster default StorageClass.</p>
 
-        <h2>2.1 Apply Manifests (<code>manifests/postgres-pvc-deployment.yaml</code>)</h2>
+        <h2>2.1 Inspect Existing Cluster StorageClasses</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Bash / PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Inspect existing storage classes in your cluster</span>
+kubectl get storageclass</code></pre>
+        </div>
+
+        <h2>2.2 PostgreSQL PVC & Deployment Manifest (<code>manifests/postgres-pvc-deployment.yaml</code>)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">YAML — postgres-pvc-deployment.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
@@ -846,7 +853,7 @@
   <span class="token-keyword">resources</span>:
     <span class="token-keyword">requests</span>:
       <span class="token-keyword">storage</span>: 1Gi
-  <span class="token-keyword">storageClassName</span>: standard
+  <span class="token-comment"># Omit storageClassName to use cluster default StorageClass</span>
 ---
 <span class="token-keyword">apiVersion</span>: apps/v1
 <span class="token-keyword">kind</span>: Deployment
@@ -877,44 +884,23 @@
             <span class="token-keyword">claimName</span>: postgres-pvc</code></pre>
         </div>
 
-        <h2>2.2 Deployment Execution Commands</h2>
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
-          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-        </div>
-
-        <div class="os-content active" data-os="linux">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Apply storage class and postgres deployment</span>
-kubectl apply -f manifests/storageclass.yaml
+        <h2>2.3 Deployment Execution Commands</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Bash / PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># 1. Apply postgres deployment & PVC</span>
 kubectl apply -f manifests/postgres-pvc-deployment.yaml
 
 <span class="token-comment"># 2. Verify PVC bound status & running pod</span>
 kubectl get pvc
 kubectl get pods -l app=postgres</code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># 1. Apply storage class and postgres deployment</span>
-kubectl apply -f manifests/storageclass.yaml
-kubectl apply -f manifests/postgres-pvc-deployment.yaml
-
-<span class="token-comment"># 2. Verify PVC bound status & running pod</span>
-kubectl get pvc
-kubectl get pods -l app=postgres</code></pre>
-          </div>
         </div>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t1_1" onclick="toggleTask(this)">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Deploy PVC & PostgreSQL Pod</span>
-              <span class="task-desc">Apply manifests and confirm postgres-pvc is BOUND and postgres-db pod is Running.</span>
+              <span class="task-label">Inspect StorageClass & Deploy PVC</span>
+              <span class="task-desc">Run kubectl get storageclass, apply postgres-pvc-deployment.yaml, and confirm postgres-pvc is BOUND.</span>
             </div>
           </li>
         </ul>
@@ -1129,25 +1115,25 @@ kubectl exec -it $NEW_POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * 
       <!-- STEP 6: KNOWLEDGE ASSESSMENT (QUIZ) -->
       <section class="content-panel" id="panel-6">
         <h1>Module 7: Knowledge Assessment</h1>
-        <p class="subtitle">Test your understanding of PV, PVC, StorageClasses, and Spark volume integration.</p>
+        <p class="subtitle">Test your understanding of PV, PVC, Default StorageClasses, and Spark volume integration.</p>
 
         <div class="quiz-card">
-          <div class="quiz-question">1. What happens to the data inside a PostgreSQL pod when the pod is deleted, if it mounts a PersistentVolumeClaim (PVC)?</div>
+          <div class="quiz-question">1. What happens when a PersistentVolumeClaim (PVC) omits the `storageClassName` property in Kubernetes?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Data remains 100% intact on the PVC and is re-attached to the new replacement pod</div>
-            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) Data is deleted permanently</div>
-            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Data is moved to CoreDNS</div>
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Kubernetes automatically binds the PVC to the cluster's Default StorageClass</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) The PVC fails to create with a syntax error</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) The PVC creates a Secret instead of a volume</div>
             <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) The Kubernetes cluster shuts down</div>
           </div>
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">2. Which Kubernetes component enables Dynamic Volume Provisioning so PersistentVolumes (PVs) are created automatically when a PVC is applied?</div>
+          <div class="quiz-question">2. Which command is used to inspect existing StorageClasses in a Kubernetes cluster?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) StorageClass</div>
-            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) ConfigMap</div>
-            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Metrics Server</div>
-            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Kube-Proxy</div>
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) kubectl get storageclass</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) kubectl get configmap</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) kubectl describe secrets</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) kubectl logs -f</div>
           </div>
         </div>
 
@@ -1345,7 +1331,7 @@ kubectl exec -it $NEW_POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * 
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = '800 24px "Outfit", sans-serif';
-      ctx.fillText('Kubernetes Persistent Volumes, PVCs & StorageClasses', canvas.width / 2, 125);
+      ctx.fillText('Kubernetes Persistent Volumes, PVCs & Default StorageClasses', canvas.width / 2, 125);
 
       ctx.fillStyle = '#f59e0b';
       ctx.font = '600 15px "Outfit", sans-serif';
@@ -1361,7 +1347,7 @@ kubectl exec -it $NEW_POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * 
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = '400 13px "Inter", sans-serif';
-      ctx.fillText('For mastering Kubernetes PV, PVC, StorageClasses, PostgreSQL data persistence', canvas.width / 2, 310);
+      ctx.fillText('For mastering Kubernetes PV, PVC, Default StorageClasses, PostgreSQL data persistence', canvas.width / 2, 310);
       ctx.fillText('across pod deletion, and Apache Spark shuffle spill volume integration', canvas.width / 2, 330);
 
       const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });

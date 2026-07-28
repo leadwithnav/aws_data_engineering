@@ -940,7 +940,6 @@ kubectl create secret generic app-secret `
   <span class="token-keyword">containers</span>:
     - <span class="token-keyword">name</span>: demo-container
       <span class="token-keyword">image</span>: nginx:alpine
-      <span class="token-keyword">imagePullPolicy</span>: Never
       <span class="token-keyword">envFrom</span>:
         - <span class="token-keyword">configMapRef</span>:
             <span class="token-keyword">name</span>: app-config

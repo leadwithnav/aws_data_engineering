@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: standard
+  # Omit storageClassName to use cluster default StorageClass
 ---
 apiVersion: apps/v1
 kind: Deployment
