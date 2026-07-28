@@ -815,7 +815,7 @@
             <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
 minikube start --cpus 2 --memory 4096
 
-<span class="token-comment"># 2. Pull container image locally via Docker CLI</span>
+<span class="token-comment"># 2. Pull target container image locally via Docker CLI</span>
 docker pull nginx:alpine
 
 <span class="token-comment"># 3. Load container image into Minikube internal docker engine</span>
@@ -832,7 +832,7 @@ minikube image ls | grep "nginx"</code></pre>
             <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
 minikube start --cpus 2 --memory 4096
 
-<span class="token-comment"># 2. Pull container image locally via Docker CLI</span>
+<span class="token-comment"># 2. Pull target container image locally via Docker CLI</span>
 docker pull nginx:alpine
 
 <span class="token-comment"># 3. Load container image into Minikube internal docker engine</span>
@@ -866,7 +866,6 @@ minikube image ls | Select-String "nginx"</code></pre>
 <span class="token-keyword">kind</span>: ConfigMap
 <span class="token-keyword">metadata</span>:
   <span class="token-keyword">name</span>: app-config
-  <span class="token-keyword">namespace</span>: analytics-dev
 <span class="token-keyword">data</span>:
   <span class="token-keyword">S3_BUCKET</span>: <span class="token-string">"my-data-lake-bucket"</span>
   <span class="token-keyword">SNOWFLAKE_URL</span>: <span class="token-string">"xy12345.us-west-2.aws.snowflakecomputing.com"</span>
@@ -888,15 +887,14 @@ minikube image ls | Select-String "nginx"</code></pre>
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-comment"># Apply ConfigMap</span>
-kubectl apply -f manifests/configmap.yaml -n analytics-dev
+kubectl apply -f manifests/configmap.yaml
 
 <span class="token-comment"># Create Secret directly on CLI</span>
 kubectl create secret generic app-secret \
   --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" \
   --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" \
   --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
-  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
-  -n analytics-dev</code></pre>
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"</code></pre>
           </div>
         </div>
 
@@ -904,15 +902,14 @@ kubectl create secret generic app-secret \
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-comment"># Apply ConfigMap</span>
-kubectl apply -f manifests/configmap.yaml -n analytics-dev
+kubectl apply -f manifests/configmap.yaml
 
 <span class="token-comment"># Create Secret directly on CLI</span>
 kubectl create secret generic app-secret `
   --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" `
   --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" `
   --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" `
-  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" `
-  -n analytics-dev</code></pre>
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"</code></pre>
           </div>
         </div>
 
@@ -939,7 +936,6 @@ kubectl create secret generic app-secret `
 <span class="token-keyword">kind</span>: Pod
 <span class="token-keyword">metadata</span>:
   <span class="token-keyword">name</span>: demo-configmap-secret-pod
-  <span class="token-keyword">namespace</span>: analytics-dev
 <span class="token-keyword">spec</span>:
   <span class="token-keyword">containers</span>:
     - <span class="token-keyword">name</span>: demo-container
@@ -968,14 +964,14 @@ kubectl create secret generic app-secret `
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-comment"># 1. Apply pod manifest</span>
-kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+kubectl apply -f manifests/pod-with-configmap-secret.yaml
 
 <span class="token-comment"># 2. Verify ConfigMap environment variables (populated via envFrom)</span>
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | grep -E "SNOWFLAKE|S3"
+kubectl exec -it demo-configmap-secret-pod -- env | grep -E "SNOWFLAKE|S3"
 
 <span class="token-comment"># 3. Read mounted Secret files directly from /etc/secrets volume mount</span>
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
           </div>
         </div>
 
@@ -983,14 +979,14 @@ kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
             <pre class="code-content"><code><span class="token-comment"># 1. Apply pod manifest</span>
-kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+kubectl apply -f manifests/pod-with-configmap-secret.yaml
 
 <span class="token-comment"># 2. Verify ConfigMap environment variables (populated via envFrom)</span>
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | Select-String "SNOWFLAKE|S3"
+kubectl exec -it demo-configmap-secret-pod -- env | Select-String "SNOWFLAKE|S3"
 
 <span class="token-comment"># 3. Read mounted Secret files directly from /etc/secrets volume mount</span>
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
           </div>
         </div>
 

@@ -60,20 +60,14 @@ minikube image ls | grep "nginx"
 
 ---
 
-## Step 2: Create Namespace, ConfigMap & Secret (via kubectl CLI)
+## Step 2: Create ConfigMap & Secret (via kubectl CLI)
 
-### 2.1 Create Namespace
-```bash
-kubectl create namespace analytics-dev
-```
-
-### 2.2 Create ConfigMap Manifest (`manifests/configmap.yaml`)
+### 2.1 Create ConfigMap Manifest (`manifests/configmap.yaml`)
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
-  namespace: analytics-dev
 data:
   S3_BUCKET: "my-data-lake-bucket"
   S3_KEY_PATH: "data/input/sales_data.parquet"
@@ -87,10 +81,10 @@ data:
 
 Apply ConfigMap:
 ```bash
-kubectl apply -f manifests/configmap.yaml -n analytics-dev
+kubectl apply -f manifests/configmap.yaml
 ```
 
-### 2.3 Create Secret Directly via `kubectl create secret` (No YAML file)
+### 2.2 Create Secret Directly via `kubectl create secret` (No YAML file)
 
 > [!IMPORTANT]
 > **No YAML file for Secrets**: To prevent committing sensitive passwords to code repositories, create the Kubernetes Secret directly on the CLI using `kubectl create secret generic`.
@@ -101,8 +95,7 @@ kubectl create secret generic app-secret `
   --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" `
   --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" `
   --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" `
-  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" `
-  -n analytics-dev
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 ```
 
 #### macOS / Linux (Bash/Zsh)
@@ -111,8 +104,7 @@ kubectl create secret generic app-secret \
   --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" \
   --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" \
   --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
-  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
-  -n analytics-dev
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 ```
 
 ---
@@ -126,7 +118,6 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: demo-configmap-secret-pod
-  namespace: analytics-dev
 spec:
   containers:
     - name: demo-container
@@ -152,33 +143,33 @@ spec:
 #### Windows (PowerShell)
 ```powershell
 # Deploy pod
-kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+kubectl apply -f manifests/pod-with-configmap-secret.yaml
 
 # Verify pod status
-kubectl get pods -n analytics-dev
+kubectl get pods
 
 # Inspect ConfigMap environment variables (populated via envFrom)
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | Select-String "SNOWFLAKE|S3"
+kubectl exec -it demo-configmap-secret-pod -- env | Select-String "SNOWFLAKE|S3"
 
 # Read mounted Secret files directly from volume mount
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_PASSWORD
 ```
 
 #### macOS / Linux (Bash/Zsh)
 ```bash
 # Deploy pod
-kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+kubectl apply -f manifests/pod-with-configmap-secret.yaml
 
 # Verify pod status
-kubectl get pods -n analytics-dev
+kubectl get pods
 
 # Inspect ConfigMap environment variables (populated via envFrom)
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | grep -E "SNOWFLAKE|S3"
+kubectl exec -it demo-configmap-secret-pod -- env | grep -E "SNOWFLAKE|S3"
 
 # Read mounted Secret files directly from volume mount
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
-kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -- cat /etc/secrets/SNOWFLAKE_PASSWORD
 ```
 
 ---
