@@ -1,4 +1,4 @@
-# Lab 13: Multi-Tenancy & Quotas — Namespaces, RBAC, ResourceQuota & LimitRange
+# Lab Guide: Multi-Tenancy & Quotas — Namespaces, RBAC, ResourceQuota & LimitRange
 
 ## Executive Summary
 This lab covers building secure multi-tenant Kubernetes and Amazon EKS environments using **Namespaces**, **RBAC Roles & RoleBindings**, **ResourceQuota**, and **LimitRange** manifests.
@@ -16,16 +16,80 @@ This lab covers building secure multi-tenant Kubernetes and Amazon EKS environme
 
 ---
 
-## Hands-On Minikube & Kubectl Verification Workflow
+## Step-by-Step Hands-On Verification Guide
+
+### Step 1: Multi-Tenant Namespaces
+Create the isolated development namespace, deploy a test workload, and verify cross-namespace isolation:
 
 ```bash
-# 1. Start Minikube cluster
-minikube start --cpus 2 --memory 4096
-
-# 2. Create isolated team namespace
+# 1. Create the isolated namespace
 kubectl create namespace analytics-dev
 
-# 3. Apply ResourceQuota (2 vCPUs, 2GiB RAM, 5 Pods max)
+# 2. Deploy a test pod inside analytics-dev
+kubectl run dev-nginx --image=nginx:alpine -n analytics-dev
+
+# 3. Verify pod status inside analytics-dev
+kubectl get pods -n analytics-dev
+
+# 4. Verify isolation (pod is NOT visible in default namespace)
+kubectl get pods -n default
+```
+
+---
+
+### Step 2: RBAC Roles & RoleBindings Security
+Configure granular permissions for service accounts and verify access rules:
+
+```bash
+# 1. Create the target ServiceAccount
+kubectl create serviceaccount spark-dev-sa -n analytics-dev
+
+# 2. Apply Role & RoleBinding manifest
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer-role
+  namespace: analytics-dev
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer-binding
+  namespace: analytics-dev
+subjects:
+  - kind: ServiceAccount
+    name: spark-dev-sa
+    namespace: analytics-dev
+roleRef:
+  kind: Role
+  name: developer-role
+  apiGroup: rbac.authorization.k8s.io
+EOF
+
+# 3. Test Allowed Action (Creating pods)
+kubectl auth can-i create pods --as=system:serviceaccount:analytics-dev:spark-dev-sa -n analytics-dev
+# Expected Output: yes
+
+# 4. Test Forbidden Action (Deleting namespaces)
+kubectl auth can-i delete namespaces --as=system:serviceaccount:analytics-dev:spark-dev-sa
+# Expected Output: no
+```
+
+---
+
+### Step 3: Namespace ResourceQuota Enforcement
+Cap aggregate namespace resource consumption and test quota breach rejection:
+
+```bash
+# 1. Apply ResourceQuota manifest (Max 2 vCPUs, 2GiB RAM, 5 Pods)
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: ResourceQuota
@@ -36,10 +100,29 @@ spec:
   hard:
     requests.cpu: "2"
     requests.memory: "2Gi"
+    limits.cpu: "4"
+    limits.memory: "4Gi"
     pods: "5"
 EOF
 
-# 4. Apply LimitRange (Injects default 100m CPU / 128Mi RAM requests)
+# 2. Describe ResourceQuota consumption
+kubectl describe resourcequota dev-quota -n analytics-dev
+
+# 3. Deploy valid pod fitting within quota
+kubectl run valid-pod --image=nginx:alpine --requests="cpu=200m,memory=256Mi" -n analytics-dev
+
+# 4. Test Quota Breach Rejection (Requesting 10 vCPUs exceeds quota)
+kubectl run giant-pod --image=nginx:alpine --requests="cpu=10" -n analytics-dev
+# Expected Output: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota
+```
+
+---
+
+### Step 4: Container LimitRange Default Injection
+Inject default resource requests automatically into unconfigured pod specs:
+
+```bash
+# 1. Apply LimitRange manifest
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: LimitRange
@@ -63,19 +146,19 @@ spec:
         memory: "64Mi"
 EOF
 
-# 5. Verify active quotas and limits
-kubectl get resourcequota,limitrange -n analytics-dev
+# 2. Describe LimitRange rules
+kubectl describe limitrange dev-limit-range -n analytics-dev
 
-# 6. Test Default Injection: Deploy pod without specifying resources
-kubectl run test-pod --image=nginx:alpine -n analytics-dev
+# 3. Test Default Injection (Deploy pod WITHOUT explicit resources)
+kubectl run auto-injected-pod --image=nginx:alpine -n analytics-dev
 
-# Inspect pod spec to verify injected requests
-kubectl get pod test-pod -n analytics-dev -o yaml | grep -A 3 "requests:"
+# 4. Inspect pod spec to verify LimitRange injected 100m CPU / 128Mi RAM requests
+kubectl get pod auto-injected-pod -n analytics-dev -o yaml | grep -A 3 "requests:"
+```
 
-# 7. Test Quota Breach: Deploy pod requesting 10 vCPUs
-kubectl run giant-pod --image=nginx:alpine --requests="cpu=10" -n analytics-dev
-# Expected: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota
+---
 
-# 8. Clean up
+### Step 5: Clean Up Resources
+```bash
 kubectl delete namespace analytics-dev
 ```

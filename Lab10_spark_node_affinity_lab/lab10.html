@@ -811,7 +811,7 @@
         </li>
         <li class="step-item" onclick="goToStep(1)">
           <span class="step-number">2</span>
-          <span class="step-title">Start 3-Node Cluster</span>
+          <span class="step-title">Start 2-Node Cluster</span>
         </li>
         <li class="step-item" onclick="goToStep(2)">
           <span class="step-number">3</span>
@@ -819,26 +819,18 @@
         </li>
         <li class="step-item" onclick="goToStep(3)">
           <span class="step-number">4</span>
-          <span class="step-title">Configure Pod Templates</span>
+          <span class="step-title">Deploy httpd & mongodb Workloads</span>
         </li>
         <li class="step-item" onclick="goToStep(4)">
           <span class="step-number">5</span>
-          <span class="step-title">RBAC & Image Caching</span>
+          <span class="step-title">Spark Node Affinity Reference</span>
         </li>
         <li class="step-item" onclick="goToStep(5)">
           <span class="step-number">6</span>
-          <span class="step-title">Submit Job with Node Affinity</span>
+          <span class="step-title">Knowledge Quiz</span>
         </li>
         <li class="step-item" onclick="goToStep(6)">
           <span class="step-number">7</span>
-          <span class="step-title">Verify Scheduling & Teardown</span>
-        </li>
-        <li class="step-item" onclick="goToStep(7)">
-          <span class="step-number">8</span>
-          <span class="step-title">Knowledge Quiz</span>
-        </li>
-        <li class="step-item" onclick="goToStep(8)">
-          <span class="step-number">9</span>
           <span class="step-title">Completion Certificate</span>
         </li>
       </ul>
@@ -852,51 +844,42 @@
            ==================================================================== -->
       <section class="content-panel active" id="panel-0">
         <h1>Module 1: Overview & Architecture</h1>
-        <p class="subtitle">Multi-node Kubernetes cluster scheduling using Node Affinity and Selectors.</p>
+        <p class="subtitle">2-Node Kubernetes cluster scheduling using Node Affinity rules (`nodeAffinity`).</p>
 
         <div class="callout callout-purple">
           <div class="callout-title">💡 Learning Objective</div>
           <div class="callout-content">
-            <p>Deploy a multi-node local <b>Minikube</b> cluster, label nodes for dedicated workload placement (`role=driver` and `role=executor`), and utilize Kubernetes <b>Node Affinity</b> rules (`requiredDuringSchedulingIgnoredDuringExecution`) via pod template files to control physical pod scheduling across nodes.</p>
+            <p>Start a 2-node <b>Minikube</b> cluster, label nodes for dedicated workload tiers (<code>tier=frontend</code> and <code>tier=backend</code>), and utilize Kubernetes <b>Node Affinity</b> rules (<code>requiredDuringSchedulingIgnoredDuringExecution</code>) to schedule an <b>httpd</b> web server on node 1 and a <b>mongodb</b> database on node 2.</p>
           </div>
         </div>
 
-        <h2>Multi-Node Node Affinity Scheduling Architecture</h2>
-        <!-- High-Contrast Vector Multi-Node Affinity Diagram -->
-        <svg class="tech-illustration" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="20" y1="0" x2="20" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
-          <line x1="120" y1="0" x2="120" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
-          <line x1="220" y1="0" x2="220" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
-          <line x1="320" y1="0" x2="320" y2="240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4" />
+        <h2>2-Node Affinity Scheduling Architecture</h2>
+        <!-- High-Contrast Vector 2-Node Affinity Diagram -->
+        <svg class="tech-illustration" viewBox="0 0 550 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="10" width="530" height="200" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+          <text x="25" y="32" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#0f172a">MINIKUBE 2-NODE CLUSTER (NODE AFFINITY SCHEDULING)</text>
 
-          <!-- Master Node -->
-          <rect x="15" y="35" width="105" height="180" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
-          <rect x="15" y="35" width="105" height="20" rx="8" fill="#f1f5f9" />
-          <text x="23" y="48" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#475569">MINIKUBE NODE</text>
-          <text x="23" y="70" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Control Plane</text>
-          <text x="23" y="85" font-family="Inter, sans-serif" font-size="7.5" fill="#94a3b8">K8s API &amp; Scheduler</text>
+          <!-- Node 1: minikube (tier=frontend) -->
+          <rect x="25" y="45" width="235" height="150" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" />
+          <text x="35" y="65" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#6d28d9">NODE 1: minikube</text>
+          <text x="35" y="80" font-family="JetBrains Mono, monospace" font-size="8" fill="#7c3aed">Label: tier=frontend</text>
 
-          <!-- Driver Node: minikube-m02 -->
-          <rect x="145" y="35" width="115" height="180" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" />
-          <text x="153" y="53" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#6d28d9">MINIKUBE-M02</text>
-          <text x="153" y="68" font-family="JetBrains Mono, monospace" font-size="7" fill="#7c3aed">Label: role=driver</text>
-          
-          <rect x="153" y="80" width="98" height="45" rx="4" fill="#7c3aed" />
-          <text x="159" y="96" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">spark-driver</text>
-          <text x="159" y="110" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#ede9fe">Affinity: role=driver</text>
+          <rect x="35" y="95" width="215" height="85" rx="6" fill="#ffffff" stroke="#a855f7" stroke-width="1.5" />
+          <text x="45" y="115" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#7e22ce">POD: httpd-frontend</text>
+          <text x="45" y="130" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">Image: httpd:alpine (Port 80)</text>
+          <text x="45" y="145" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Affinity: matchExpressions [tier=frontend]</text>
+          <text x="45" y="160" font-family="Inter, sans-serif" font-size="7.5" font-weight="600" fill="#059669">✅ Scheduled on minikube</text>
 
-          <!-- Executor Node: minikube-m03 -->
-          <rect x="275" y="35" width="115" height="180" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
-          <text x="283" y="53" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#047857">MINIKUBE-M03</text>
-          <text x="283" y="68" font-family="JetBrains Mono, monospace" font-size="7" fill="#059669">Label: role=executor</text>
+          <!-- Node 2: minikube-m02 (tier=backend) -->
+          <rect x="280" y="45" width="245" height="150" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" />
+          <text x="290" y="65" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#047857">NODE 2: minikube-m02</text>
+          <text x="290" y="80" font-family="JetBrains Mono, monospace" font-size="8" fill="#059669">Label: tier=backend</text>
 
-          <rect x="283" y="80" width="98" height="45" rx="4" fill="#059669" />
-          <text x="289" y="96" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">spark-exec-1</text>
-          <text x="289" y="110" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#d1fae5">Affinity: role=exec</text>
-
-          <rect x="283" y="135" width="98" height="45" rx="4" fill="#059669" />
-          <text x="289" y="151" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#ffffff">spark-exec-2</text>
-          <text x="289" y="165" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#d1fae5">Affinity: role=exec</text>
+          <rect x="290" y="95" width="225" height="85" rx="6" fill="#ffffff" stroke="#10b981" stroke-width="1.5" />
+          <text x="300" y="115" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#047857">POD: mongodb-backend</text>
+          <text x="300" y="130" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">Image: mongo:latest (Port 27017)</text>
+          <text x="300" y="145" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#2563eb">Affinity: matchExpressions [tier=backend]</text>
+          <text x="300" y="160" font-family="Inter, sans-serif" font-size="7.5" font-weight="600" fill="#059669">✅ Scheduled on minikube-m02</text>
         </svg>
 
         <ul class="task-checklist">
@@ -904,18 +887,18 @@
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Review Node Affinity Concepts</span>
-              <span class="task-desc">Understand how node labels and hard pod affinity constraints direct driver and executor scheduling.</span>
+              <span class="task-desc">Understand how node labels and hard affinity constraints direct httpd and mongodb pod scheduling across nodes.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 2 (PANEL 1): START 3-NODE CLUSTER
+           MODULE 2 (PANEL 1): START 2-NODE CLUSTER
            ==================================================================== -->
       <section class="content-panel" id="panel-1">
-        <h1>Module 2: Start 3-Node Minikube Cluster</h1>
-        <p class="subtitle">Provisioning a multi-node Kubernetes environment locally.</p>
+        <h1>Module 2: Start 2-Node Minikube Cluster</h1>
+        <p class="subtitle">Provisioning a 2-node local Kubernetes cluster with Docker driver.</p>
 
         <!-- OS Tab Switcher -->
         <div class="os-tab-bar">
@@ -923,27 +906,27 @@
           <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
         </div>
 
-        <h2>1. Start 3-Node Cluster</h2>
+        <h2>1. Start 2-Node Cluster</h2>
 
         <div class="os-content active" data-os="powershell">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Delete existing single-node cluster to prevent conflicts</span>
+            <pre class="code-content"><code><span class="token-comment"># Delete existing cluster to ensure clean 2-node setup</span>
 <span class="token-keyword">minikube</span> <span class="token-function">delete</span>
 
-<span class="token-comment"># Start a new 3-node cluster</span>
-<span class="token-keyword">minikube</span> <span class="token-function">start</span> --nodes 3</code></pre>
+<span class="token-comment"># Start a 2-node cluster using docker driver</span>
+<span class="token-keyword">minikube</span> <span class="token-function">start</span> --nodes=<span class="token-number">2</span> --cpus=<span class="token-number">2</span> --memory=<span class="token-number">1800</span> --driver=<span class="token-string">docker</span></code></pre>
           </div>
         </div>
 
         <div class="os-content" data-os="mac">
           <div class="code-block-container">
             <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-comment"># Delete existing single-node cluster to prevent conflicts</span>
+            <pre class="code-content"><code><span class="token-comment"># Delete existing cluster to ensure clean 2-node setup</span>
 <span class="token-keyword">minikube</span> <span class="token-function">delete</span>
 
-<span class="token-comment"># Start a new 3-node cluster</span>
-<span class="token-keyword">minikube</span> <span class="token-function">start</span> --nodes 3</code></pre>
+<span class="token-comment"># Start a 2-node cluster using docker driver</span>
+<span class="token-keyword">minikube</span> <span class="token-function">start</span> --nodes=<span class="token-number">2</span> --cpus=<span class="token-number">2</span> --memory=<span class="token-number">1800</span> --driver=<span class="token-string">docker</span></code></pre>
           </div>
         </div>
 
@@ -957,8 +940,8 @@
           <li class="task-checkbox-container" data-task-id="t1_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Provision 3-Node Cluster</span>
-              <span class="task-desc">Verify that `minikube`, `minikube-m02`, and `minikube-m03` are in `Ready` status.</span>
+              <span class="task-label">Provision 2-Node Cluster</span>
+              <span class="task-desc">Verify that `minikube` and `minikube-m02` are both in `Ready` status.</span>
             </div>
           </li>
         </ul>
@@ -968,23 +951,23 @@
            MODULE 3 (PANEL 2): ASSIGN NODE LABELS
            ==================================================================== -->
       <section class="content-panel" id="panel-2">
-        <h1>Module 3: Assign Labels to Nodes</h1>
-        <p class="subtitle">Attaching key-value metadata labels to Kubernetes physical nodes.</p>
+        <h1>Module 3: Assign Tier Labels to Nodes</h1>
+        <p class="subtitle">Attaching key-value metadata labels to target nodes for affinity matching.</p>
 
         <h2>1. Apply Node Labels</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-comment"># Label minikube-m02 to host Driver Pods</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">label</span> nodes minikube-m02 role=driver
+          <pre class="code-content"><code><span class="token-comment"># Label Node 1 (minikube) as tier=frontend</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">label</span> nodes minikube tier=frontend
 
-<span class="token-comment"># Label minikube-m03 to host Executor Pods</span>
-<span class="token-keyword">kubectl</span> <span class="token-function">label</span> nodes minikube-m03 role=executor</code></pre>
+<span class="token-comment"># Label Node 2 (minikube-m02) as tier=backend</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">label</span> nodes minikube-m02 tier=backend</code></pre>
         </div>
 
         <h2>2. Verify Node Labels</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span> -L role</code></pre>
+          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">nodes</span> -L tier</code></pre>
         </div>
 
         <ul class="task-checklist">
@@ -992,20 +975,110 @@
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Label Worker Nodes</span>
-              <span class="task-desc">Verify that `minikube-m02` has label `driver` and `minikube-m03` has label `executor`.</span>
+              <span class="task-desc">Verify `minikube` has label `tier=frontend` and `minikube-m02` has label `tier=backend`.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 4 (PANEL 3): CONFIGURE POD TEMPLATES
+           MODULE 4 (PANEL 3): DEPLOY HTTPD & MONGODB WORKLOADS
            ==================================================================== -->
       <section class="content-panel" id="panel-3">
-        <h1>Module 4: Configure Pod Templates</h1>
-        <p class="subtitle">Defining hard node affinity constraints inside Spark pod template files.</p>
+        <h1>Module 4: Deploy Workloads with Node Affinity</h1>
+        <p class="subtitle">Deploying httpd on the frontend node and mongodb on the backend node.</p>
 
-        <h2>1. Driver Pod Template (`manifests/spark-driver-template.yaml`)</h2>
+        <h2>1. Frontend Pod Manifest (`manifests/httpd-frontend-pod.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Pod</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">httpd-frontend</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">app</span>: <span class="token-string">httpd-frontend</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">affinity</span>:
+    <span class="token-keyword">nodeAffinity</span>:
+      <span class="token-keyword">requiredDuringSchedulingIgnoredDuringExecution</span>:
+        <span class="token-keyword">nodeSelectorTerms</span>:
+          - <span class="token-keyword">matchExpressions</span>:
+              - <span class="token-keyword">key</span>: <span class="token-string">tier</span>
+                <span class="token-keyword">operator</span>: <span class="token-string">In</span>
+                <span class="token-keyword">values</span>:
+                  - <span class="token-string">frontend</span>
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: <span class="token-string">httpd</span>
+      <span class="token-keyword">image</span>: <span class="token-string">httpd:alpine</span>
+      <span class="token-keyword">ports</span>:
+        - <span class="token-keyword">containerPort</span>: <span class="token-number">80</span></code></pre>
+        </div>
+
+        <h2>2. Backend Pod Manifest (`manifests/mongodb-backend-pod.yaml`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML Manifest</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
+<span class="token-keyword">kind</span>: <span class="token-string">Pod</span>
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: <span class="token-string">mongodb-backend</span>
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">app</span>: <span class="token-string">mongodb-backend</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">affinity</span>:
+    <span class="token-keyword">nodeAffinity</span>:
+      <span class="token-keyword">requiredDuringSchedulingIgnoredDuringExecution</span>:
+        <span class="token-keyword">nodeSelectorTerms</span>:
+          - <span class="token-keyword">matchExpressions</span>:
+              - <span class="token-keyword">key</span>: <span class="token-string">tier</span>
+                <span class="token-keyword">operator</span>: <span class="token-string">In</span>
+                <span class="token-keyword">values</span>:
+                  - <span class="token-string">backend</span>
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: <span class="token-string">mongodb</span>
+      <span class="token-keyword">image</span>: <span class="token-string">mongo:latest</span>
+      <span class="token-keyword">ports</span>:
+        - <span class="token-keyword">containerPort</span>: <span class="token-number">27017</span></code></pre>
+        </div>
+
+        <h2>3. Apply Manifests & Verify Node Placement (`kubectl get pods -o wide`)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-comment"># Apply httpd frontend pod (targets tier=frontend -> minikube)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f manifests/httpd-frontend-pod.yaml
+
+<span class="token-comment"># Apply mongodb backend pod (targets tier=backend -> minikube-m02)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f manifests/mongodb-backend-pod.yaml
+
+<span class="token-comment"># Verify physical pod node assignment</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -o wide</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Deploy & Verify Node Placements</span>
+              <span class="task-desc">Confirm `httpd-frontend` runs on `minikube` and `mongodb-backend` runs on `minikube-m02`.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ====================================================================
+           MODULE 5 (PANEL 4): SPARK NODE AFFINITY REFERENCE
+           ==================================================================== -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Spark Driver & Executor Node Affinity Reference</h1>
+        <p class="subtitle">How Apache Spark workloads utilize Node Affinity to separate Driver and Executor pods.</p>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">⚡ Spark on Kubernetes Node Scheduling Architecture</div>
+          <div class="callout-content">
+            <p>In production enterprise EKS / Kubernetes clusters, data engineering teams separate <b>Spark Driver</b> pods (which require heavy memory and persistent metadata connections) from <b>Spark Executor</b> pods (which process transient partitions). This is accomplished via Spark Pod Templates.</p>
+          </div>
+        </div>
+
+        <h2>1. Spark Driver Pod Template (`manifests/spark-driver-template.yaml`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubernetes YAML</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
@@ -1024,10 +1097,10 @@
                   - <span class="token-string">driver</span>
   <span class="token-keyword">containers</span>:
     - <span class="token-keyword">name</span>: <span class="token-variable">spark-driver</span>
-      <span class="token-keyword">image</span>: <span class="token-string">spark-container-demo:latest</span></code></pre>
+      <span class="token-keyword">image</span>: <span class="token-string">spark-on-eks:latest</span></code></pre>
         </div>
 
-        <h2>2. Executor Pod Template (`manifests/spark-executor-template.yaml`)</h2>
+        <h2>2. Spark Executor Pod Template (`manifests/spark-executor-template.yaml`)</h2>
         <div class="code-block-container">
           <div class="code-header"><span class="code-lang-badge">Kubernetes YAML</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
           <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: <span class="token-string">v1</span>
@@ -1046,196 +1119,38 @@
                   - <span class="token-string">executor</span>
   <span class="token-keyword">containers</span>:
     - <span class="token-keyword">name</span>: <span class="token-variable">spark-executor</span>
-      <span class="token-keyword">image</span>: <span class="token-string">spark-container-demo:latest</span></code></pre>
+      <span class="token-keyword">image</span>: <span class="token-string">spark-on-eks:latest</span></code></pre>
         </div>
 
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t3_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Inspect Pod Templates</span>
-              <span class="task-desc">Understand how `requiredDuringSchedulingIgnoredDuringExecution` forces hard scheduling rules.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 5 (PANEL 4): RBAC & IMAGE CACHING
-           ==================================================================== -->
-      <section class="content-panel" id="panel-4">
-        <h1>Module 5: Apply RBAC & Cache Image</h1>
-        <p class="subtitle">Configuring service accounts and loading container images into Minikube cache.</p>
-
-        <h2>1. Apply RBAC Permissions (`spark-rbac.yaml`)</h2>
+        <h2>3. Submitting Spark Jobs with Pod Templates (`spark-submit`)</h2>
         <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f spark-rbac.yaml</code></pre>
-        </div>
-
-        <h2>2. Cache Docker Image in Minikube</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Minikube CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">minikube</span> <span class="token-function">image</span> load <span class="token-variable">spark-on-eks:latest</span></code></pre>
+          <div class="code-header"><span class="code-lang-badge">Spark-Submit CLI Reference</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">spark-submit</span> `
+  --master <span class="token-string">"k8s://https://127.0.0.1:6443"</span> `
+  --deploy-mode <span class="token-string">cluster</span> `
+  --name <span class="token-string">spark-affinity-demo</span> `
+  --conf <span class="token-string">spark.kubernetes.container.image=spark-on-eks:latest</span> `
+  --conf <span class="token-string">spark.kubernetes.driver.podTemplateFile=manifests/spark-driver-template.yaml</span> `
+  --conf <span class="token-string">spark.kubernetes.executor.podTemplateFile=manifests/spark-executor-template.yaml</span> `
+  <span class="token-string">local:///opt/spark/work-dir/spark_app.py</span></code></pre>
         </div>
 
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t4_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Apply RBAC & Load Image</span>
-              <span class="task-desc">Configure `spark` ServiceAccount permissions and load `spark-on-eks:latest` into cluster memory.</span>
+              <span class="task-label">Understand Spark Node Affinity Submissions</span>
+              <span class="task-desc">Verify how `--conf spark.kubernetes.driver.podTemplateFile` and `executor.podTemplateFile` inject nodeAffinity rules into Spark pods.</span>
             </div>
           </li>
         </ul>
       </section>
 
       <!-- ====================================================================
-           MODULE 6 (PANEL 5): SUBMIT JOB WITH NODE AFFINITY
+           MODULE 6 (PANEL 5): KNOWLEDGE ASSESSMENT QUIZ
            ==================================================================== -->
       <section class="content-panel" id="panel-5">
-        <h1>Module 6: Submit Job with Node Affinity</h1>
-        <p class="subtitle">Injecting pod template specifications into spark-submit execution.</p>
-
-        <!-- OS Tab Switcher -->
-        <div class="os-tab-bar">
-          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
-          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
-        </div>
-
-        <h2>1. Extract Kubernetes Master API Endpoint</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-variable">$K8S_MASTER</span> = (<span class="token-keyword">kubectl</span> <span class="token-variable">config</span> <span class="token-function">view</span> --minify -o jsonpath=<span class="token-string">'{.clusters[0].cluster.server}'</span>)
-<span class="token-keyword">echo</span> <span class="token-string">"K8s Master Endpoint: $K8S_MASTER"</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">export</span> <span class="token-variable">K8S_MASTER</span>=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-<span class="token-keyword">echo</span> <span class="token-string">"K8s Master Endpoint: $K8S_MASTER"</span></code></pre>
-          </div>
-        </div>
-
-        <h2>2. Submit Spark Job</h2>
-
-        <div class="os-content active" data-os="powershell">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">spark-submit</span> `
-  --master <span class="token-string">"k8s://$K8S_MASTER"</span> `
-  --deploy-mode <span class="token-string">cluster</span> `
-  --name <span class="token-string">spark-affinity-demo</span> `
-  --conf <span class="token-string">spark.kubernetes.container.image=spark-on-eks:latest</span> `
-  --conf <span class="token-string">spark.kubernetes.authenticate.driver.serviceAccountName=spark</span> `
-  --conf <span class="token-string">spark.executor.instances=2</span> `
-  --conf <span class="token-string">spark.kubernetes.driver.podTemplateFile=d:\trainings\aws_data_engineering\Lab10_spark_node_affinity_lab\manifests\spark-driver-template.yaml</span> `
-  --conf <span class="token-string">spark.kubernetes.executor.podTemplateFile=d:\trainings\aws_data_engineering\Lab10_spark_node_affinity_lab\manifests\spark-executor-template.yaml</span> `
-  <span class="token-string">local:///opt/spark/work-dir/spark_app.py</span> `
-  <span class="token-string">local:///opt/spark/work-dir/sample_data.csv</span></code></pre>
-          </div>
-        </div>
-
-        <div class="os-content" data-os="mac">
-          <div class="code-block-container">
-            <div class="code-header"><span class="code-lang-badge">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-            <pre class="code-content"><code><span class="token-keyword">spark-submit</span> \
-  --master <span class="token-string">"k8s://$K8S_MASTER"</span> \
-  --deploy-mode <span class="token-string">cluster</span> \
-  --name <span class="token-string">spark-affinity-demo</span> \
-  --conf <span class="token-string">spark.kubernetes.container.image=spark-on-eks:latest</span> \
-  --conf <span class="token-string">spark.kubernetes.authenticate.driver.serviceAccountName=spark</span> \
-  --conf <span class="token-string">spark.executor.instances=2</span> \
-  --conf <span class="token-string">spark.kubernetes.driver.podTemplateFile=~/trainings/aws_data_engineering/Lab10_spark_node_affinity_lab/manifests/spark-driver-template.yaml</span> \
-  --conf <span class="token-string">spark.kubernetes.executor.podTemplateFile=~/trainings/aws_data_engineering/Lab10_spark_node_affinity_lab/manifests/spark-executor-template.yaml</span> \
-  <span class="token-string">local:///opt/spark/work-dir/spark_app.py</span> \
-  <span class="token-string">local:///opt/spark/work-dir/sample_data.csv</span></code></pre>
-          </div>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t5_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Submit Job with Templates</span>
-              <span class="task-desc">Execute `spark-submit` passing `--conf spark.kubernetes.driver.podTemplateFile` and `--conf spark.kubernetes.executor.podTemplateFile`.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 7 (PANEL 6): VERIFY SCHEDULING & TEARDOWN
-           ==================================================================== -->
-      <section class="content-panel" id="panel-6">
-        <h1>Module 7: Verify Scheduling & Teardown</h1>
-        <p class="subtitle">Validating physical pod placement across worker nodes.</p>
-
-        <h2>1. Query Detailed Pod Placement (`-o wide`)</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Kubectl CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -o wide</code></pre>
-        </div>
-
-        <h2>2. Placement Validation Matrix</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Pod Name</th>
-              <th>Assigned Node</th>
-              <th>Status</th>
-              <th>Validation Check</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>spark-affinity-demo-driver</code></td>
-              <td><code>minikube-m02</code></td>
-              <td><span style="color: var(--accent-green); font-weight: 600;">Running</span></td>
-              <td>✅ Matched <code>role=driver</code> node label</td>
-            </tr>
-            <tr>
-              <td><code>spark-affinity-demo-exec-1</code></td>
-              <td><code>minikube-m03</code></td>
-              <td><span style="color: var(--accent-green); font-weight: 600;">Running</span></td>
-              <td>✅ Matched <code>role=executor</code> node label</td>
-            </tr>
-            <tr>
-              <td><code>spark-affinity-demo-exec-2</code></td>
-              <td><code>minikube-m03</code></td>
-              <td><span style="color: var(--accent-green); font-weight: 600;">Running</span></td>
-              <td>✅ Matched <code>role=executor</code> node label</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <h2>3. Teardown Resources</h2>
-        <div class="code-block-container">
-          <div class="code-header"><span class="code-lang-badge">Kubectl & Minikube CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
-          <pre class="code-content"><code><span class="token-keyword">kubectl</span> <span class="token-function">delete</span> pod --all
-<span class="token-keyword">minikube</span> <span class="token-function">stop</span></code></pre>
-        </div>
-
-        <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t6_1">
-            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
-            <div class="task-content">
-              <span class="task-label">Verify Node Affinity & Teardown</span>
-              <span class="task-desc">Confirm driver ran on `minikube-m02`, executors ran on `minikube-m03`, and stop cluster.</span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ====================================================================
-           MODULE 8 (PANEL 7): KNOWLEDGE ASSESSMENT QUIZ
-           ==================================================================== -->
-      <section class="content-panel" id="panel-7">
-        <h1>Module 8: Knowledge Assessment</h1>
+        <h1>Module 6: Knowledge Assessment</h1>
         <p class="subtitle">Test your understanding of Node Affinity and multi-node Kubernetes scheduling.</p>
 
         <div class="quiz-card">
@@ -1248,11 +1163,11 @@
         </div>
 
         <div class="quiz-card">
-          <div class="quiz-question">2. Which command attaches a custom label `role=driver` to a physical Kubernetes node named `minikube-m02`?</div>
+          <div class="quiz-question">2. Which command attaches a custom label `tier=frontend` to a physical Kubernetes node named `minikube`?</div>
           <div class="quiz-options">
-            <div class="quiz-option" data-correct="true">A) `kubectl label nodes minikube-m02 role=driver`</div>
-            <div class="quiz-option" data-correct="false">B) `kubectl annotate node minikube-m02 role=driver`</div>
-            <div class="quiz-option" data-correct="false">C) `minikube config set role driver`</div>
+            <div class="quiz-option" data-correct="true">A) `kubectl label nodes minikube tier=frontend`</div>
+            <div class="quiz-option" data-correct="false">B) `kubectl annotate node minikube tier=frontend`</div>
+            <div class="quiz-option" data-correct="false">C) `minikube config set tier frontend`</div>
           </div>
         </div>
 
@@ -1275,7 +1190,7 @@
         </div>
 
         <ul class="task-checklist">
-          <li class="task-checkbox-container" data-task-id="t7_1">
+          <li class="task-checkbox-container" data-task-id="t5_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
               <span class="task-label">Complete Knowledge Check</span>
@@ -1286,17 +1201,17 @@
       </section>
 
       <!-- ====================================================================
-           MODULE 9 (PANEL 8): COMPLETION CERTIFICATE
+           MODULE 7 (PANEL 6): COMPLETION CERTIFICATE
            ==================================================================== -->
-      <section class="content-panel" id="panel-8">
-        <h1>Module 9: Completion Certificate</h1>
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Completion Certificate</h1>
         <p class="subtitle" id="certSubtitle">Complete 100% of the lab tasks to unlock your official certificate.</p>
 
         <!-- Locked Card Message (shown when progress < 100%) -->
         <div class="callout callout-amber" id="certLockMessage">
           <div class="callout-title">🔒 Certificate Locked</div>
           <div class="callout-content">
-            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 8 to unlock your completion certificate!</p>
+            <p>You have completed <b id="certLockPercent">0%</b> of the lab tasks. Please complete all task checklists and knowledge check questions across Modules 1 to 6 to unlock your completion certificate!</p>
           </div>
         </div>
 
@@ -1326,7 +1241,7 @@
        ========================================================================== -->
   <script>
     let currentStep = 0;
-    const totalStepsCount = 9; // 9 total panels (0 to 8)
+    const totalStepsCount = 7; // 7 total panels (0 to 6)
     let currentOs = 'powershell';
 
     // 1. Navigation Controller: goToStep(stepIndex)
@@ -1361,10 +1276,10 @@
 
       btnPrev.disabled = (currentStep === 0);
 
-      if (currentStep === 7) {
+      if (currentStep === 5) {
         btnNext.disabled = false;
         btnNext.innerText = 'Go to Certificate →';
-      } else if (currentStep === 8) {
+      } else if (currentStep === 6) {
         const containers = document.querySelectorAll('.task-checkbox-container');
         let checked = 0;
         containers.forEach(c => { if (c.classList.contains('checked')) checked++; });

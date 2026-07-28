@@ -970,12 +970,55 @@
     <span class="token-keyword">team</span>: <span class="token-string">data-analytics</span></code></pre>
         </div>
 
+        <h2>3. Execute & Test Namespace Commands (`kubectl`)</h2>
+        <p>Create the isolated namespace, deploy a test workload inside it, and verify cross-namespace isolation:</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Create the isolated development namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Deploy a test pod inside analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">dev-nginx</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Verify pod status inside analytics-dev</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Verify isolation (pod is NOT visible in default namespace)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">default</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Create the isolated development namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create namespace</span> <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Deploy a test pod inside analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">dev-nginx</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Verify pod status inside analytics-dev</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Verify isolation (pod is NOT visible in default namespace)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pods</span> -n <span class="token-string">default</span></code></pre>
+          </div>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t1_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Understand Namespace Scoping</span>
-              <span class="task-desc">Verify how namespaces establish isolated boundaries for Kubernetes workloads.</span>
+              <span class="task-label">Create & Verify Isolated Namespace</span>
+              <span class="task-desc">Run `kubectl create namespace analytics-dev`, deploy `dev-nginx`, and verify namespace isolation.</span>
             </div>
           </li>
         </ul>
@@ -1025,12 +1068,59 @@
   <span class="token-keyword">apiGroup</span>: <span class="token-string">rbac.authorization.k8s.io</span></code></pre>
         </div>
 
+        <h2>3. Execute & Test RBAC Commands (`kubectl`)</h2>
+        <p>Create the ServiceAccount, apply the RBAC manifests, and test permissions using <code>kubectl auth can-i</code>:</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Create the target Service Account</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create serviceaccount</span> <span class="token-string">spark-dev-sa</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Apply Role and RoleBinding manifests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">dev-rbac.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Allowed Permission: Can spark-dev-sa create pods in analytics-dev?</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">auth can-i</span> <span class="token-string">create</span> <span class="token-variable">pods</span> --as=system:serviceaccount:analytics-dev:spark-dev-sa -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Output: yes</span>
+
+<span class="token-comment"># 4. Test Forbidden Permission: Can spark-dev-sa delete cluster namespaces?</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">auth can-i</span> <span class="token-string">delete</span> <span class="token-variable">namespaces</span> --as=system:serviceaccount:analytics-dev:spark-dev-sa
+<span class="token-comment"># Output: no</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Create the target Service Account</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">create serviceaccount</span> <span class="token-string">spark-dev-sa</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Apply Role and RoleBinding manifests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">dev-rbac.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Allowed Permission: Can spark-dev-sa create pods in analytics-dev?</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">auth can-i</span> <span class="token-string">create</span> <span class="token-variable">pods</span> --as=system:serviceaccount:analytics-dev:spark-dev-sa -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Output: yes</span>
+
+<span class="token-comment"># 4. Test Forbidden Permission: Can spark-dev-sa delete cluster namespaces?</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">auth can-i</span> <span class="token-string">delete</span> <span class="token-variable">namespaces</span> --as=system:serviceaccount:analytics-dev:spark-dev-sa
+<span class="token-comment"># Output: no</span></code></pre>
+          </div>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t2_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Configure Namespace RBAC Security</span>
-              <span class="task-desc">Verify how Role and RoleBinding restrict service accounts to specific verbs and resources.</span>
+              <span class="task-label">Configure & Test RBAC Security</span>
+              <span class="task-desc">Apply Role/RoleBinding manifests and verify permissions using `kubectl auth can-i`.</span>
             </div>
           </li>
         </ul>
@@ -1063,12 +1153,57 @@
     <span class="token-keyword">pods</span>: <span class="token-string">"5"</span>                  <span class="token-comment"># Max 5 total pods</span></code></pre>
         </div>
 
+        <h2>3. Execute & Test ResourceQuota Commands (`kubectl`)</h2>
+        <p>Apply the quota ceiling manifest, check active namespace consumption, and attempt a pod deployment that breaches the quota limits:</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply ResourceQuota manifest to analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">resource-quota.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Describe ResourceQuota consumption</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">describe</span> <span class="token-variable">resourcequota</span> <span class="token-string">dev-quota</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Valid Pod Creation (Request 200m CPU / 256Mi RAM - Fits inside Quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">valid-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=200m,memory=256Mi"</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Test Quota Breach Rejection (Request 10 vCPUs - Exceeds 2 vCPU Quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">giant-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=10"</span> -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Expected Output: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply ResourceQuota manifest to analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">resource-quota.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Describe ResourceQuota consumption</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">describe</span> <span class="token-variable">resourcequota</span> <span class="token-string">dev-quota</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Valid Pod Creation (Request 200m CPU / 256Mi RAM - Fits inside Quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">valid-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=200m,memory=256Mi"</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Test Quota Breach Rejection (Request 10 vCPUs - Exceeds 2 vCPU Quota)</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">giant-pod</span> --image=<span class="token-string">nginx:alpine</span> --requests=<span class="token-string">"cpu=10"</span> -n <span class="token-string">analytics-dev</span>
+<span class="token-comment"># Expected Output: Error from server (Forbidden): pods "giant-pod" is forbidden: exceeded quota: dev-quota</span></code></pre>
+          </div>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t3_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Enforce ResourceQuota Limits</span>
-              <span class="task-desc">Understand aggregate namespace resource capping across CPU, Memory, and Pod counts.</span>
+              <span class="task-label">Enforce & Test ResourceQuota Rejection</span>
+              <span class="task-desc">Apply ResourceQuota manifest and verify HTTP 403 Forbidden rejection when deploying oversized pods.</span>
             </div>
           </li>
         </ul>
@@ -1109,12 +1244,55 @@
         <span class="token-keyword">memory</span>: <span class="token-string">"64Mi"</span></code></pre>
         </div>
 
+        <h2>3. Execute & Test LimitRange Commands (`kubectl`)</h2>
+        <p>Apply the LimitRange manifest, inspect default rules, deploy a pod <i>without</i> resource parameters, and verify injected defaults:</p>
+
+        <!-- OS Tab Switcher -->
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+          <button class="os-tab-btn" data-os="mac" onclick="switchOsTab('mac')">🍎 macOS / Linux (Terminal)</button>
+        </div>
+
+        <div class="os-content active" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply LimitRange manifest to analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">limit-range.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Describe LimitRange rules</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">describe</span> <span class="token-variable">limitrange</span> <span class="token-string">dev-limit-range</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Default Injection: Deploy pod without specifying requests or limits</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">auto-injected-pod</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Inspect pod spec to verify LimitRange injected 100m CPU / 128Mi RAM requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pod</span> <span class="token-string">auto-injected-pod</span> -n <span class="token-string">analytics-dev</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">Select-String</span> <span class="token-string">"cpu:"</span> -Context <span class="token-number">0</span><span class="token-punctuation">,</span><span class="token-number">2</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Terminal CLI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply LimitRange manifest to analytics-dev namespace</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">apply</span> -f <span class="token-string">limit-range.yaml</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 2. Describe LimitRange rules</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">describe</span> <span class="token-variable">limitrange</span> <span class="token-string">dev-limit-range</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 3. Test Default Injection: Deploy pod without specifying requests or limits</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">run</span> <span class="token-string">auto-injected-pod</span> --image=<span class="token-string">nginx:alpine</span> -n <span class="token-string">analytics-dev</span>
+
+<span class="token-comment"># 4. Inspect pod spec to verify LimitRange injected 100m CPU / 128Mi RAM requests</span>
+<span class="token-keyword">kubectl</span> <span class="token-function">get</span> <span class="token-variable">pod</span> <span class="token-string">auto-injected-pod</span> -n <span class="token-string">analytics-dev</span> -o <span class="token-string">yaml</span> | <span class="token-keyword">grep</span> -A 3 <span class="token-string">"requests:"</span></code></pre>
+          </div>
+        </div>
+
         <ul class="task-checklist">
           <li class="task-checkbox-container" data-task-id="t4_1">
             <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="task-content">
-              <span class="task-label">Configure Container LimitRange</span>
-              <span class="task-desc">Verify default resource injection and min/max container size constraints.</span>
+              <span class="task-label">Configure & Test LimitRange Defaults</span>
+              <span class="task-desc">Apply LimitRange manifest, deploy unconfigured pod, and verify default CPU/Memory injection.</span>
             </div>
           </li>
         </ul>
