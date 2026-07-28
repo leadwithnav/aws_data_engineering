@@ -2,7 +2,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: spark-eks-cluster-new2
+  name: spark-eks-cluster-new3
   region: us-west-2 # Feel free to modify the region
   version: "1.36"   # Standard stable Kubernetes version
 

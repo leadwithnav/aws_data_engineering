@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 16: EKS Cluster Architecture, Node Group Strategies & Autoscaling</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-indigo: #6366f1;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 140px;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: width 0.3s ease;
+    }
+
+    #progressPercent {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 36px;
+    }
+
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    /* --- LAYOUT WRAPPER --- */
+    .main-wrapper {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: var(--footer-height);
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+      font-weight: 700;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.1);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--border-color);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2rem 3rem 6rem 3rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.75rem;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.85rem 0;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      margin: 1.25rem 0;
+      border-left: 4px solid;
+    }
+
+    .callout-purple {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: var(--accent-purple);
+    }
+
+    .callout-blue {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: var(--accent-blue);
+    }
+
+    .callout-amber {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: var(--accent-amber);
+    }
+
+    .callout-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+
+    .callout-content {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- STRATEGY CARDS GRID --- */
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .strategy-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.35rem;
+      transition: var(--transition-smooth);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .strategy-card:hover {
+      border-color: var(--accent-purple);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    .strategy-header {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .strategy-card.compute .strategy-header { color: var(--accent-green); }
+    .strategy-card.memory .strategy-header { color: var(--accent-purple); }
+    .strategy-card.spot .strategy-header { color: var(--accent-amber); }
+
+    .strategy-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .badge-compute { background-color: rgba(5, 150, 105, 0.15); color: var(--accent-green); }
+    .badge-memory { background-color: rgba(124, 58, 237, 0.15); color: var(--accent-purple); }
+    .badge-spot { background-color: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+
+    .strategy-list {
+      list-style: none;
+      margin: 0.85rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .strategy-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      margin: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.completed {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.05);
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.completed .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.completed .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* --- QUIZ CARD --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quiz-question {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.85rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-purple);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.15);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.15);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    /* --- CERTIFICATE CANVAS --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn-cert {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    #certCanvas {
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* --- STICKY FOOTER NAVIGATION --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      border: none;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .footer-copyright {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    td {
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">16</div>
+      <div class="brand-title">Lab 16: EKS Cluster Architecture, Node Strategies & Autoscaling</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> Theme
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Control Plane & Namespaces</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Node Group Strategies</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Autoscaling Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">EKS Auto Mode & Scaling Tiers</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Console Node Group Management</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Knowledge Assessment</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- STEP 0: OVERVIEW & ARCHITECTURE -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Architecture Principles</h1>
+        <p class="subtitle">Understand Amazon EKS Shared Cluster Architecture, Control Plane isolation, and Node Group Strategies.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Architecture Objective</div>
+          <div class="callout-content">
+            Master the core enterprise architectural concepts of Amazon EKS: the AWS-managed Control Plane, tenant namespace isolation (`ResourceQuota` / `NetworkPolicy`), shared cluster add-on services, specialized EC2 Node Group strategies (Compute, Memory, Spot), and the synchronized autoscaling loop.
+          </div>
+        </div>
+
+        <h2>EKS Shared Cluster Model</h2>
+        <svg class="tech-illustration" viewBox="0 0 650 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Main Box -->
+          <rect x="10" y="10" width="630" height="240" rx="10" fill="none" stroke="#7c3aed" stroke-width="2" />
+          <text x="25" y="32" font-family="Outfit, sans-serif" font-size="11" font-weight="700" fill="#7c3aed">3. AMAZON EKS CLUSTER (SHARED MODEL)</text>
+
+          <!-- Control Plane -->
+          <rect x="25" y="42" width="600" height="35" rx="6" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.5" />
+          <text x="35" y="64" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#6b21a8">Control Plane (AWS Managed): API Server • Scheduler • Controller Manager • etcd</text>
+
+          <!-- Tenant Namespaces -->
+          <rect x="25" y="85" width="600" height="70" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" />
+          <text x="35" y="103" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#1d4ed8">Tenant Namespaces (Logical Isolation)</text>
+
+          <rect x="35" y="110" width="135" height="38" rx="4" fill="#ffffff" stroke="#93c5fd" stroke-width="1" />
+          <text x="42" y="125" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1e40af">Tenant A Namespace</text>
+          <text x="42" y="138" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Resource Quota • Network Policy</text>
+
+          <rect x="180" y="110" width="135" height="38" rx="4" fill="#ffffff" stroke="#93c5fd" stroke-width="1" />
+          <text x="187" y="125" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1e40af">Tenant B Namespace</text>
+          <text x="187" y="138" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Resource Quota • Network Policy</text>
+
+          <rect x="325" y="110" width="135" height="38" rx="4" fill="#ffffff" stroke="#93c5fd" stroke-width="1" />
+          <text x="332" y="125" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1e40af">Tenant C Namespace</text>
+          <text x="332" y="138" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Resource Quota • Network Policy</text>
+
+          <rect x="470" y="110" width="145" height="38" rx="4" fill="#ffffff" stroke="#93c5fd" stroke-width="1" />
+          <text x="477" y="125" font-family="Inter, sans-serif" font-size="8.5" font-weight="700" fill="#1e40af">Tenant N Namespace</text>
+          <text x="477" y="138" font-family="Inter, sans-serif" font-size="7.5" fill="#475569">Resource Quota • Network Policy</text>
+
+          <!-- Shared Services -->
+          <rect x="25" y="162" width="600" height="38" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5" />
+          <text x="35" y="185" font-family="Outfit, sans-serif" font-size="9.5" font-weight="700" fill="#15803d">Shared Cluster Services: CoreDNS • Kube-Proxy • VPC CNI • Metrics Server • Cluster Autoscaler • Ingress</text>
+
+          <!-- Worker Node Groups -->
+          <rect x="25" y="206" width="600" height="35" rx="6" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5" />
+          <text x="35" y="227" font-family="Outfit, sans-serif" font-size="9.5" font-weight="700" fill="#b45309">Worker Node Groups (Shared): Auto Scaling • Self-Healing • Mixed Instance Types (Compute / Memory / Spot)</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review EKS Cluster Shared Architecture</span>
+              <span class="task-desc">Understand Control Plane isolation, Tenant Namespaces, Shared Add-on Services, and Worker Node Groups.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 1: CONTROL PLANE & NAMESPACES -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Control Plane & Shared Services Anatomy</h1>
+        <p class="subtitle">Examine the AWS-managed control plane, cluster add-ons, and multi-tenant namespace boundaries.</p>
+
+        <h2>Control Plane Responsibilities</h2>
+        <p>AWS manages the EKS control plane across 3 Availability Zones (AZs) to guarantee high availability and fault tolerance:</p>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          <li><b>Kube-API Server</b>: Handles API calls, authenticates requests, and serves as the single source of interaction.</li>
+          <li><b>etcd</b>: High-availability distributed key-value store holding the complete state of the cluster.</li>
+          <li><b>Kube-Scheduler</b>: Assigns newly created pods to available nodes based on resource requests and nodeSelectors.</li>
+          <li><b>Controller Manager</b>: Enforces cluster state loops (NodeController, ReplicaSetController, NamespaceController).</li>
+        </ul>
+
+        <h2>Shared Cluster Add-on Services</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Object Name</th>
+              <th>Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>CoreDNS</b></td>
+              <td><code>coredns</code></td>
+              <td>Internal cluster DNS resolution for Kubernetes services and pods.</td>
+            </tr>
+            <tr>
+              <td><b>VPC CNI Plugin</b></td>
+              <td><code>aws-node</code></td>
+              <td>Assigns native AWS VPC IP addresses directly to Kubernetes pods.</td>
+            </tr>
+            <tr>
+              <td><b>Metrics Server</b></td>
+              <td><code>metrics-server</code></td>
+              <td>Aggregates pod CPU/Memory metrics for HPA and Cluster Autoscaler.</td>
+            </tr>
+            <tr>
+              <td><b>Cluster Autoscaler</b></td>
+              <td><code>cluster-autoscaler</code></td>
+              <td>Dynamically adjusts EC2 Auto Scaling Group capacity based on pending pods.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Understand Control Plane & Shared Add-ons</span>
+              <span class="task-desc">Differentiate Control Plane components from CoreDNS, VPC CNI, and Metrics Server.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 2: NODE GROUP STRATEGIES -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Worker Node Group Strategies</h1>
+        <p class="subtitle">Compare Compute, Memory-Optimized, and Spot instance node group strategies.</p>
+
+        <div class="strategy-grid">
+          <!-- Compute Nodes -->
+          <div class="strategy-card compute">
+            <div>
+              <div class="strategy-header">
+                💻 1. Compute Nodes
+                <span class="strategy-badge badge-compute">On-Demand</span>
+              </div>
+              <p style="font-size: 0.85rem;">General purpose compute workloads requiring balanced resources.</p>
+              <ul class="strategy-list">
+                <li><b>Instance Families</b>: <code>m6i</code>, <code>m7i</code>, <code>c6i</code>, <code>c7i</code></li>
+                <li><b>Ideal For</b>: Microservices, REST APIs, Web Servers, CI/CD runners</li>
+                <li><b>Characteristics</b>: Balanced CPU/RAM, predictable On-Demand pricing</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Memory Optimized Nodes -->
+          <div class="strategy-card memory">
+            <div>
+              <div class="strategy-header">
+                🧠 2. Memory Nodes
+                <span class="strategy-badge badge-memory">High RAM</span>
+              </div>
+              <p style="font-size: 0.85rem;">Memory intensive workloads processing large datasets in-RAM.</p>
+              <ul class="strategy-list">
+                <li><b>Instance Families</b>: <code>r6i</code>, <code>r7i</code>, <code>x2idn</code>, <code>x2iedn</code></li>
+                <li><b>Ideal For</b>: Redis, Memcached, Kafka, Spark, Flink, Elasticsearch</li>
+                <li><b>Characteristics</b>: High RAM-to-vCPU ratio, fast memory throughput</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Spot Nodes -->
+          <div class="strategy-card spot">
+            <div>
+              <div class="strategy-header">
+                ⚡ 3. Spot Nodes
+                <span class="strategy-badge badge-spot">70-90% Savings</span>
+              </div>
+              <p style="font-size: 0.85rem;">Cost-optimized interruptible capacity for resilient batch jobs.</p>
+              <ul class="strategy-list">
+                <li><b>Instance Families</b>: Mixed EC2 Families (`m5`, `m6i`, `c5`, `r5`)</li>
+                <li><b>Ideal For</b>: Spark workers, ETL jobs, ML training, Batch pipelines</li>
+                <li><b>Characteristics</b>: Up to 90% discount, interruptible capacity</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Compare Compute, Memory & Spot Node Strategies</span>
+              <span class="task-desc">Analyze instance family selections, cost trade-offs, and workload placement criteria.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 3: AUTOSCALING ARCHITECTURE -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: EKS Autoscaling Architecture</h1>
+        <p class="subtitle">Examine the 4-step scaling action loop combining Metrics Server, HPA, and Cluster Autoscaler.</p>
+
+        <h2>The 4-Step Autoscaling Loop</h2>
+        <svg class="tech-illustration" viewBox="0 0 650 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Step 1 -->
+          <rect x="15" y="30" width="130" height="110" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5" />
+          <text x="25" y="52" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#15803d">1. Observe Metrics</text>
+          <text x="25" y="70" font-family="Inter, sans-serif" font-size="8" fill="#475569">Metrics Server collects</text>
+          <text x="25" y="84" font-family="Inter, sans-serif" font-size="8" fill="#475569">CPU, Memory, & Custom</text>
+          <text x="25" y="98" font-family="Inter, sans-serif" font-size="8" fill="#475569">metrics from pods.</text>
+
+          <!-- Arrow 1 -->
+          <path d="M150 85 L170 85" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+
+          <!-- Step 2 -->
+          <rect x="175" y="30" width="130" height="110" rx="8" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.5" />
+          <text x="185" y="52" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#6b21a8">2. Evaluate Demand</text>
+          <text x="185" y="70" font-family="Inter, sans-serif" font-size="8" fill="#475569">HPA evaluates target %.</text>
+          <text x="185" y="84" font-family="Inter, sans-serif" font-size="8" fill="#475569">Cluster Autoscaler</text>
+          <text x="185" y="98" font-family="Inter, sans-serif" font-size="8" fill="#475569">checks Pending pods.</text>
+
+          <!-- Arrow 2 -->
+          <path d="M310 85 L330 85" stroke="#94a3b8" stroke-width="2" />
+
+          <!-- Step 3 -->
+          <rect x="335" y="30" width="130" height="110" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" />
+          <text x="345" y="52" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#1d4ed8">3. Take Action</text>
+          <text x="345" y="70" font-family="Inter, sans-serif" font-size="8" fill="#475569">Scale Pods via HPA.</text>
+          <text x="345" y="84" font-family="Inter, sans-serif" font-size="8" fill="#475569">Scale EC2 Nodes via</text>
+          <text x="345" y="98" font-family="Inter, sans-serif" font-size="8" fill="#475569">Cluster Autoscaler.</text>
+
+          <!-- Arrow 3 -->
+          <path d="M470 85 L490 85" stroke="#94a3b8" stroke-width="2" />
+
+          <!-- Step 4 -->
+          <rect x="495" y="30" width="130" height="110" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5" />
+          <text x="505" y="52" font-family="Outfit, sans-serif" font-size="10" font-weight="700" fill="#b45309">4. Stabilize</text>
+          <text x="505" y="70" font-family="Inter, sans-serif" font-size="8" fill="#475569">Maintain desired state</text>
+          <text x="505" y="84" font-family="Inter, sans-serif" font-size="8" fill="#475569">within Min and Max</text>
+          <text x="505" y="98" font-family="Inter, sans-serif" font-size="8" fill="#475569">node boundaries.</text>
+        </svg>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Autoscaling Architecture Loop</span>
+              <span class="task-desc">Understand how Pod scaling (HPA) triggers Node scaling (Cluster Autoscaler) through the 4-step loop.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 4: EKS AUTO MODE & SCALING TIERS -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: EKS Auto Mode & Control Plane Tiers</h1>
+        <p class="subtitle">Explore AWS EKS Auto Mode, Extended Version Support, and Control Plane Scaling Tiers.</p>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">ℹ️ AWS Managed Innovations</div>
+          <div class="callout-content">
+            Amazon EKS provides options to automate routine node and cluster administration tasks:
+          </div>
+        </div>
+
+        <h2>1. EKS Auto Mode</h2>
+        <p>EKS Auto Mode automates compute, storage, and networking tasks. AWS automatically provisions, patches, and scales compute infrastructure to meet application needs without requiring manual EC2 Auto Scaling Group setup.</p>
+
+        <h2>2. Control Plane Scaling Tiers</h2>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          <li><b>Standard Tier</b>: Control plane automatically scales dynamically with cluster growth.</li>
+          <li><b>Pre-Provisioned High-Performance Tiers</b>: Pre-provisions control plane infrastructure with fixed high performance to eliminate scaling latency during massive traffic spikes.</li>
+        </ul>
+
+        <h2>3. Kubernetes Version Upgrade Policy</h2>
+        <p>AWS provides <b>Standard Support</b> (14 months) and <b>Extended Support</b> (up to 26 months), automatically upgrading cluster minor versions when standard support ends to guarantee security compliance.</p>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review EKS Auto Mode & Scaling Tiers</span>
+              <span class="task-desc">Understand EKS Auto Mode benefits, Control Plane pre-provisioned tiers, and Extended Support.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 5: CONSOLE NODE GROUP MANAGEMENT -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: AWS Console Node Group Management</h1>
+        <p class="subtitle">Walk through managing EC2 Managed Node Groups and Fargate Profiles in the AWS Console.</p>
+
+        <h2>Console Walkthrough: Adding a Node Group</h2>
+        <ol style="margin-left: 1.5rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.5rem;">
+          <li>In the AWS Console, navigate to <b>Amazon EKS -> Clusters</b> and click your cluster.</li>
+          <li>Select the <b>Compute</b> tab.</li>
+          <li>Under <b>Node groups</b>, click <b>Add node group</b>.</li>
+          <li>Specify <b>Node group name</b> (e.g. <code>spark-node-group</code>) and attach the Worker Node IAM Role.</li>
+          <li>Select Capacity Type (<b>On-Demand</b> or <b>Spot</b>) and EC2 instance types (e.g. <code>m6i.large</code>).</li>
+          <li>Set scaling boundaries: <b>Minimum size</b> (1), <b>Desired size</b> (2), and <b>Maximum size</b> (5).</li>
+          <li>Click <b>Create</b>. AWS provisions the EC2 Auto Scaling Group and joins nodes to your EKS cluster.</li>
+        </ol>
+
+        <h2>Fargate Profiles (Serverless Pod Execution)</h2>
+        <p>Fargate profiles allow running pods directly on AWS-managed microVMs without managing EC2 instances. Fargate automatically allocates exact CPU/Memory resources based on pod specs.</p>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review AWS Console Node Group Creation</span>
+              <span class="task-desc">Understand Console steps for provisioning EC2 Managed Node Groups and Fargate profiles.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 6: KNOWLEDGE ASSESSMENT (QUIZ) -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of EKS Architecture, Node Group Strategies, and Autoscaling.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. Which Node Group Strategy offers up to 70-90% cost savings for resilient, fault-tolerant Spark batch workloads?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">A) Compute On-Demand Nodes</div>
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">B) Spot Nodes</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Memory-Optimized On-Demand Nodes</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Fargate Dedicated Host Nodes</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. In the 4-step EKS Autoscaling loop, what happens when HPA increases replica count and pods remain stuck in Pending state due to capacity limits?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Cluster Autoscaler evaluates pending pods and expands the EC2 Auto Scaling Group capacity</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) EKS Control Plane immediately terminates the pending pods</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) CoreDNS redirects traffic to S3</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) VPC CNI deletes the namespace</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. What is the primary benefit of pre-provisioned Control Plane Scaling Tiers in Amazon EKS?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Eliminates control plane scaling latency during massive high-throughput traffic bursts</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) Automatically reduces AWS bill by 90%</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Removes the need for CoreDNS</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Converts worker nodes to Fargate</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">4. Which EKS feature automates routine cluster infrastructure tasks across compute, storage, and networking?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) EKS Auto Mode</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) VPC CNI Plugin</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Metrics Server</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Kube-Proxy</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Quiz</span>
+              <span class="task-desc">Answer all assessment questions to validate your learning.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 7: COMPLETION CERTIFICATE -->
+      <section class="content-panel" id="panel-7">
+        <h1>Completion Certificate</h1>
+        <p class="subtitle">Congratulations! Complete all lab tasks to generate and download your personalized certificate.</p>
+
+        <div class="cert-canvas-container">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Full Name" oninput="generateCertificate()">
+          
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Controller -->
+  <script>
+    const TOTAL_STEPS = 8;
+    let currentStep = 0;
+    const completedTasks = new Set();
+    const totalTaskCount = 7;
+
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= TOTAL_STEPS) return;
+      currentStep = stepIndex;
+
+      document.querySelectorAll('.content-panel').forEach((panel, idx) => {
+        panel.classList.toggle('active', idx === stepIndex);
+      });
+
+      document.querySelectorAll('.step-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === stepIndex);
+      });
+
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = currentStep === 0;
+
+      if (currentStep === TOTAL_STEPS - 1) {
+        btnNext.textContent = 'Completed 🎉';
+        btnNext.disabled = true;
+      } else {
+        btnNext.textContent = 'Next Step →';
+        btnNext.disabled = false;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    function switchOsTab(os) {
+      document.querySelectorAll('.os-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-os') === os);
+      });
+      document.querySelectorAll('.os-content').forEach(content => {
+        content.classList.toggle('active', content.getAttribute('data-os') === os);
+      });
+    }
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', newTheme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+      generateCertificate();
+    }
+
+    function toggleTask(elem) {
+      const taskId = elem.getAttribute('data-task-id');
+      if (!taskId) return;
+
+      if (completedTasks.has(taskId)) {
+        completedTasks.delete(taskId);
+        elem.classList.remove('completed');
+      } else {
+        completedTasks.add(taskId);
+        elem.classList.add('completed');
+      }
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const percentage = Math.round((completedTasks.size / totalTaskCount) * 100);
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').textContent = percentage + '%';
+
+      if (percentage === 100) {
+        generateCertificate();
+      }
+    }
+
+    function checkQuiz(optionElem) {
+      const parentCard = optionElem.closest('.quiz-card');
+      const isCorrect = optionElem.getAttribute('data-correct') === 'true';
+
+      parentCard.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'incorrect');
+      });
+
+      if (isCorrect) {
+        optionElem.classList.add('correct');
+      } else {
+        optionElem.classList.add('incorrect');
+      }
+    }
+
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 85);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 24px "Outfit", sans-serif';
+      ctx.fillText('Amazon EKS Architecture & Node Group Strategies', canvas.width / 2, 125);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 15px "Outfit", sans-serif';
+      ctx.fillText('Autoscaling Architecture & EKS Auto Mode', canvas.width / 2, 155);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '400 14px "Inter", sans-serif';
+      ctx.fillText('This is proudly presented to', canvas.width / 2, 210);
+
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = '700 32px "Outfit", sans-serif';
+      ctx.fillText(name, canvas.width / 2, 260);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '400 13px "Inter", sans-serif';
+      ctx.fillText('For mastering Amazon EKS Control Plane Architecture, Node Group Strategies,', canvas.width / 2, 310);
+      ctx.fillText('Autoscaling 4-Step Action Loops, EKS Auto Mode, and Fargate profiles', canvas.width / 2, 330);
+
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Date: ${today}`, 70, 420);
+
+      ctx.textAlign = 'right';
+      ctx.font = '32px "Great Vibes", cursive';
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText('Navdeep Kaur', canvas.width - 70, 415);
+      
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 12px "Inter", sans-serif';
+      ctx.fillText('Lead Data Engineering Instructor', canvas.width - 70, 435);
+    }
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      const link = document.createElement('a');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+      link.download = `EKS_Architecture_Certificate_${name.replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function shareCertificate() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'EKS Architecture & Node Group Strategies Certificate',
+          text: 'I completed Lab 16: EKS Architecture, Node Group Strategies & Autoscaling!',
+          url: window.location.href
+        }).catch(err => console.log('Share dismissed', err));
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Lab link copied to clipboard!');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      goToStep(0);
+      generateCertificate();
+    });
+  </script>
+</body>
+</html>

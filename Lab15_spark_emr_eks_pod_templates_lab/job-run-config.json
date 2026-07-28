@@ -1,0 +1,31 @@
+{
+  "applicationConfiguration": [
+    {
+      "classification": "spark-defaults",
+      "properties": {
+        "spark.driver.cores": "1",
+        "spark.driver.memory": "1024m",
+        "spark.executor.cores": "1",
+        "spark.executor.memory": "1024m",
+        "spark.executor.instances": "2",
+        "spark.sql.adaptive.enabled": "true",
+        "spark.sql.adaptive.coalescePartitions.enabled": "true",
+        "spark.dynamicAllocation.enabled": "false",
+        "spark.kubernetes.driver.podTemplateFile": "local:///opt/spark/pod-templates/driver-pod-template.yaml",
+        "spark.kubernetes.executor.podTemplateFile": "local:///opt/spark/pod-templates/executor-pod-template.yaml",
+        "spark.kubernetes.driver.podTemplateContainerName": "spark-kubernetes-driver",
+        "spark.kubernetes.executor.podTemplateContainerName": "spark-kubernetes-executor"
+      }
+    }
+  ],
+  "monitoringConfiguration": {
+    "persistentAppUI": "ENABLED",
+    "cloudWatchMonitoringConfiguration": {
+      "logGroupName": "/aws/emr-eks/spark-jobs",
+      "logStreamNamePrefix": "lab15-pod-template-job"
+    },
+    "s3MonitoringConfiguration": {
+      "logUri": "s3://my-emr-eks-logs-bucket/logs/"
+    }
+  }
+}

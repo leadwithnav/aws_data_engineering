@@ -1,18 +1,17 @@
-# Lab Guide: Multi-Tenancy & Quotas — Namespaces, RBAC, ResourceQuota & LimitRange
+# Lab Guide: Multi-Tenancy & Quotas — Namespaces, ResourceQuota & LimitRange
 
 ## Executive Summary
-This lab covers building secure multi-tenant Kubernetes and Amazon EKS environments using **Namespaces**, **RBAC Roles & RoleBindings**, **ResourceQuota**, and **LimitRange** manifests.
+This lab covers building secure multi-tenant Kubernetes and Amazon EKS environments using **Namespaces**, **ResourceQuota**, and **LimitRange** manifests.
 
 ---
 
-## 4 Pillars of Kubernetes Multi-Tenancy
+## 3 Pillars of Kubernetes Multi-Tenancy
 
 | Component | Manifest Object | Purpose |
 | :--- | :--- | :--- |
 | **1. Namespaces** | `Namespace` | Virtual cluster partitioning per team/environment (`analytics-dev`, `analytics-prod`). |
-| **2. RBAC Security** | `Role` & `RoleBinding` | Granular permission control binding users/service accounts to allowed API actions (verbs). |
-| **3. ResourceQuota** | `ResourceQuota` | Aggregate namespace resource ceilings capping total CPU, Memory, and Pod counts. |
-| **4. LimitRange** | `LimitRange` | Injects default container CPU/RAM requests and sets min/max container size constraints. |
+| **2. ResourceQuota** | `ResourceQuota` | Aggregate namespace resource ceilings capping total CPU, Memory, and Pod counts. |
+| **3. LimitRange** | `LimitRange` | Injects default container CPU/RAM requests and sets min/max container size constraints. |
 
 ---
 
@@ -37,55 +36,7 @@ kubectl get pods -n default
 
 ---
 
-### Step 2: RBAC Roles & RoleBindings Security
-Configure granular permissions for service accounts and verify access rules:
-
-```bash
-# 1. Create the target ServiceAccount
-kubectl create serviceaccount spark-dev-sa -n analytics-dev
-
-# 2. Apply Role & RoleBinding manifest
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: developer-role
-  namespace: analytics-dev
-rules:
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "services", "configmaps"]
-    verbs: ["get", "list", "watch", "create", "delete"]
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["get", "list", "create", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: developer-binding
-  namespace: analytics-dev
-subjects:
-  - kind: ServiceAccount
-    name: spark-dev-sa
-    namespace: analytics-dev
-roleRef:
-  kind: Role
-  name: developer-role
-  apiGroup: rbac.authorization.k8s.io
-EOF
-
-# 3. Test Allowed Action (Creating pods)
-kubectl auth can-i create pods --as=system:serviceaccount:analytics-dev:spark-dev-sa -n analytics-dev
-# Expected Output: yes
-
-# 4. Test Forbidden Action (Deleting namespaces)
-kubectl auth can-i delete namespaces --as=system:serviceaccount:analytics-dev:spark-dev-sa
-# Expected Output: no
-```
-
----
-
-### Step 3: Namespace ResourceQuota Enforcement
+### Step 2: Namespace ResourceQuota Enforcement
 Cap aggregate namespace resource consumption and test quota breach rejection:
 
 ```bash
@@ -118,7 +69,7 @@ kubectl run giant-pod --image=nginx:alpine --requests="cpu=10" -n analytics-dev
 
 ---
 
-### Step 4: Container LimitRange Default Injection
+### Step 3: Container LimitRange Default Injection
 Inject default resource requests automatically into unconfigured pod specs:
 
 ```bash
@@ -158,7 +109,7 @@ kubectl get pod auto-injected-pod -n analytics-dev -o yaml | grep -A 3 "requests
 
 ---
 
-### Step 5: Clean Up Resources
+### Step 4: Clean Up Resources
 ```bash
 kubectl delete namespace analytics-dev
 ```

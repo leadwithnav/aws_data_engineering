@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-executor-template
+  labels:
+    app.kubernetes.io/name: spark-job
+    app.kubernetes.io/component: executor
+    tier: analytics-executor
+    environment: production
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "4040"
+    cluster.autoscaler.kubernetes.io/safe-to-evict: "true"
+spec:
+  nodeSelector:
+    role: spark-executor-nodes
+  tolerations:
+    - key: "spark-workload"
+      operator: "Exists"
+      effect: "NoSchedule"
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+    - name: spark-kubernetes-executor
+      imagePullPolicy: Always
+      env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: SPARK_JAVA_OPT_G1GC
+          value: "-XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=35"
+      resources:
+        requests:
+          cpu: "1000m"
+          memory: "1024Mi"
+        limits:
+          cpu: "2000m"
+          memory: "2048Mi"
+      volumeMounts:
+        - name: executor-spark-local-dir
+          mountPath: /data/spark-scratch
+  volumes:
+    - name: executor-spark-local-dir
+      emptyDir: {}

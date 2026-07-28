@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-driver-pvc-template
+  labels:
+    app.kubernetes.io/component: driver
+    tier: analytics-spark-pvc
+spec:
+  containers:
+    - name: spark-kubernetes-driver
+      imagePullPolicy: Always
+      env:
+        - name: SPARK_LOCAL_DIRS
+          value: "/tmp/spark-local-dir"
+        - name: SPARK_EVENTLOG_DIR
+          value: "file:///tmp/spark-events"
+      volumeMounts:
+        - name: spark-shuffle-spill-volume
+          mountPath: /tmp/spark-local-dir
+        - name: spark-eventlog-volume
+          mountPath: /tmp/spark-events
+        - name: spark-checkpoint-volume
+          mountPath: /tmp/spark-checkpoints
+  volumes:
+    - name: spark-shuffle-spill-volume
+      persistentVolumeClaim:
+        claimName: spark-shuffle-pvc
+    - name: spark-eventlog-volume
+      persistentVolumeClaim:
+        claimName: spark-history-pvc
+    - name: spark-checkpoint-volume
+      persistentVolumeClaim:
+        claimName: spark-checkpoint-pvc

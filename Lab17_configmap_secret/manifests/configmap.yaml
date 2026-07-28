@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: analytics-dev
+data:
+  S3_BUCKET: "my-data-lake-bucket"
+  S3_KEY_PATH: "data/input/sales_data.parquet"
+  SNOWFLAKE_URL: "xy12345.us-west-2.aws.snowflakecomputing.com"
+  SNOWFLAKE_ACCOUNT: "xy12345.us-west-2.aws"
+  SNOWFLAKE_WAREHOUSE: "ANALYTICS_WH"
+  SNOWFLAKE_DATABASE: "DATA_LAKE_DB"
+  SNOWFLAKE_SCHEMA: "PUBLIC"
+  SNOWFLAKE_ROLE: "DATA_ENGINEER_ROLE"
+  APP_ENV: "production"

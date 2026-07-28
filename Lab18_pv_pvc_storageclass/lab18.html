@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 18: Kubernetes PV, PVC, StorageClass — PostgreSQL Data Persistence & Spark Volumes</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-indigo: #6366f1;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 140px;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: width 0.3s ease;
+    }
+
+    #progressPercent {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 36px;
+    }
+
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    /* --- LAYOUT WRAPPER --- */
+    .main-wrapper {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: var(--footer-height);
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+      font-weight: 700;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.1);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--border-color);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2rem 3rem 6rem 3rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.75rem;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.85rem 0;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      margin: 1.25rem 0;
+      border-left: 4px solid;
+    }
+
+    .callout-purple {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: var(--accent-purple);
+    }
+
+    .callout-blue {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: var(--accent-blue);
+    }
+
+    .callout-amber {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: var(--accent-amber);
+    }
+
+    .callout-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+
+    .callout-content {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- OS SWITCHER TABS --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2px;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      padding: 0.6rem 1.15rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .os-tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .os-tab-btn.active {
+      color: var(--accent-purple);
+      border-bottom-color: var(--accent-purple);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR & CODE BLOCKS --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* Syntax Highlighting Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      margin: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.completed {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.05);
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.completed .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.completed .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* --- QUIZ CARD --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quiz-question {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.85rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-purple);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.15);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.15);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    /* --- CERTIFICATE CANVAS --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn-cert {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    #certCanvas {
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* --- STICKY FOOTER NAVIGATION --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      border: none;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .footer-copyright {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    td {
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">18</div>
+      <div class="brand-title">Lab 18: Kubernetes PV, PVC, StorageClass & PostgreSQL Persistence</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> Theme
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Storage Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Deploy PVC & PostgreSQL</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Insert Database Records</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Delete Pod & Verify Data</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">Spark & Persistent Volumes</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Spark PVC Pod Template</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Knowledge Assessment</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- STEP 0: OVERVIEW & ARCHITECTURE -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Storage Concepts</h1>
+        <p class="subtitle">Understand PersistentVolumes (PV), PersistentVolumeClaims (PVC), and StorageClasses (SC) in Kubernetes.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Non-Ephemeral Storage Architecture</div>
+          <div class="callout-content">
+            Pods in Kubernetes are ephemeral by default. When a pod crashes or gets deleted, its container file system is destroyed. Attaching a <b>PersistentVolumeClaim (PVC)</b> to a pod mounts external storage (`/var/lib/postgresql/data`) that survives pod deletions and automatic controller recreations!
+          </div>
+        </div>
+
+        <h2>Kubernetes Storage Abstraction Layer</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Concept</th>
+              <th>Abstraction</th>
+              <th>Primary Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>PersistentVolume (PV)</b></td>
+              <td>Cluster Storage Resource</td>
+              <td>Physical or cloud storage provisioned by admin or StorageClass.</td>
+            </tr>
+            <tr>
+              <td><b>PersistentVolumeClaim (PVC)</b></td>
+              <td>Developer Storage Request</td>
+              <td>Requests storage size (e.g. <code>1Gi</code>), access mode, and StorageClass.</td>
+            </tr>
+            <tr>
+              <td><b>StorageClass (SC)</b></td>
+              <td>Provisioning Policy</td>
+              <td>Enables <b>Dynamic Provisioning</b> so PVs are automatically created on demand.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Kubernetes Storage Abstraction Layer</span>
+              <span class="task-desc">Understand how PV, PVC, and StorageClass decouple workload definitions from physical storage infrastructure.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 1: DEPLOY PVC & POSTGRESQL -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Deploy PVC & PostgreSQL Deployment</h1>
+        <p class="subtitle">Create StorageClass, PersistentVolumeClaim, and deploy PostgreSQL with mounted volume.</p>
+
+        <h2>2.1 Apply Manifests (<code>manifests/postgres-pvc-deployment.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML — postgres-pvc-deployment.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: PersistentVolumeClaim
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: postgres-pvc
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">accessModes</span>: [<span class="token-string">ReadWriteOnce</span>]
+  <span class="token-keyword">resources</span>:
+    <span class="token-keyword">requests</span>:
+      <span class="token-keyword">storage</span>: 1Gi
+  <span class="token-keyword">storageClassName</span>: standard
+---
+<span class="token-keyword">apiVersion</span>: apps/v1
+<span class="token-keyword">kind</span>: Deployment
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: postgres-db
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">replicas</span>: 1
+  <span class="token-keyword">selector</span>:
+    <span class="token-keyword">matchLabels</span>: { <span class="token-keyword">app</span>: postgres }
+  <span class="token-keyword">template</span>:
+    <span class="token-keyword">metadata</span>:
+      <span class="token-keyword">labels</span>: { <span class="token-keyword">app</span>: postgres }
+    <span class="token-keyword">spec</span>:
+      <span class="token-keyword">containers</span>:
+        - <span class="token-keyword">name</span>: postgres
+          <span class="token-keyword">image</span>: postgres:15-alpine
+          <span class="token-keyword">env</span>:
+            - <span class="token-keyword">name</span>: POSTGRES_DB
+              <span class="token-keyword">value</span>: <span class="token-string">"ecommerce_db"</span>
+            - <span class="token-keyword">name</span>: PGDATA
+              <span class="token-keyword">value</span>: <span class="token-string">"/var/lib/postgresql/data/pgdata"</span>
+          <span class="token-keyword">volumeMounts</span>:
+            - <span class="token-keyword">name</span>: postgres-persistent-storage
+              <span class="token-keyword">mountPath</span>: /var/lib/postgresql/data
+      <span class="token-keyword">volumes</span>:
+        - <span class="token-keyword">name</span>: postgres-persistent-storage
+          <span class="token-keyword">persistentVolumeClaim</span>:
+            <span class="token-keyword">claimName</span>: postgres-pvc</code></pre>
+        </div>
+
+        <h2>2.2 Deployment Execution Commands</h2>
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply storage class and postgres deployment</span>
+kubectl apply -f manifests/storageclass.yaml
+kubectl apply -f manifests/postgres-pvc-deployment.yaml
+
+<span class="token-comment"># 2. Verify PVC bound status & running pod</span>
+kubectl get pvc
+kubectl get pods -l app=postgres</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply storage class and postgres deployment</span>
+kubectl apply -f manifests/storageclass.yaml
+kubectl apply -f manifests/postgres-pvc-deployment.yaml
+
+<span class="token-comment"># 2. Verify PVC bound status & running pod</span>
+kubectl get pvc
+kubectl get pods -l app=postgres</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Deploy PVC & PostgreSQL Pod</span>
+              <span class="task-desc">Apply manifests and confirm postgres-pvc is BOUND and postgres-db pod is Running.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 2: INSERT DATABASE RECORDS -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Insert Records into PostgreSQL</h1>
+        <p class="subtitle">Connect to PostgreSQL via `kubectl exec` and populate `orders` table inside `ecommerce_db`.</p>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Get active PostgreSQL pod name</span>
+POD_NAME=$(kubectl get pods -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+
+<span class="token-comment"># 2. Connect via psql and insert orders data</span>
+kubectl exec -it $POD_NAME -- psql -U postgres -d ecommerce_db -c "
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(100),
+    amount NUMERIC(10,2)
+);
+INSERT INTO orders (customer_name, amount) VALUES ('Alice Smith', 250.50);
+INSERT INTO orders (customer_name, amount) VALUES ('Bob Jones', 1200.00);
+INSERT INTO orders (customer_name, amount) VALUES ('Charlie Brown', 85.25);
+"
+
+<span class="token-comment"># 3. Query inserted orders</span>
+kubectl exec -it $POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * FROM orders;"</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Get active PostgreSQL pod name</span>
+$POD_NAME = (kubectl get pods -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+
+<span class="token-comment"># 2. Connect via psql and insert orders data</span>
+kubectl exec -it $POD_NAME -- psql -U postgres -d ecommerce_db -c "
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(100),
+    amount NUMERIC(10,2)
+);
+INSERT INTO orders (customer_name, amount) VALUES ('Alice Smith', 250.50);
+INSERT INTO orders (customer_name, amount) VALUES ('Bob Jones', 1200.00);
+INSERT INTO orders (customer_name, amount) VALUES ('Charlie Brown', 85.25);
+"
+
+<span class="token-comment"># 3. Query inserted orders</span>
+kubectl exec -it $POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * FROM orders;"</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Insert Sample Database Records</span>
+              <span class="task-desc">Create orders table and insert Alice, Bob, and Charlie records into PostgreSQL.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 3: DELETE POD & VERIFY DATA -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Delete Pod & Verify Data Persistence</h1>
+        <p class="subtitle">Delete the PostgreSQL pod and verify data survival in the newly recreated replacement pod.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">🔥 Resilience Test</div>
+          <div class="callout-content">
+            Delete the pod running PostgreSQL. The Kubernetes Deployment controller will immediately spin up a replacement pod and re-attach the existing PVC (`postgres-pvc`).
+          </div>
+        </div>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Delete running PostgreSQL pod</span>
+kubectl delete pod -l app=postgres
+
+<span class="token-comment"># 2. Watch new pod spin up</span>
+kubectl get pods -l app=postgres -w
+
+<span class="token-comment"># 3. Get replacement pod name</span>
+NEW_POD_NAME=$(kubectl get pods -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+
+<span class="token-comment"># 4. Query orders table in new pod — Data is 100% Intact!</span>
+kubectl exec -it $NEW_POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * FROM orders;"</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Delete running PostgreSQL pod</span>
+kubectl delete pod -l app=postgres
+
+<span class="token-comment"># 2. Watch new pod spin up</span>
+kubectl get pods -l app=postgres -w
+
+<span class="token-comment"># 3. Get replacement pod name</span>
+$NEW_POD_NAME = (kubectl get pods -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+
+<span class="token-comment"># 4. Query orders table in new pod — Data is 100% Intact!</span>
+kubectl exec -it $NEW_POD_NAME -- psql -U postgres -d ecommerce_db -c "SELECT * FROM orders;"</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Verify Data Persistence Across Pod Restart</span>
+              <span class="task-desc">Delete postgres pod, wait for replacement pod, and run SELECT * FROM orders to confirm data survival.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 4: SPARK & PERSISTENT VOLUMES -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Why & How to Use PVs with Apache Spark</h1>
+        <p class="subtitle">Learn why Persistent Volumes are critical for Spark Shuffle Spill, Event Logs, and Streaming Checkpoints.</p>
+
+        <div class="callout callout-blue">
+          <div class="callout-title">⚡ Spark & PV Integration Strategy</div>
+          <div class="callout-content">
+            In Apache Spark on Kubernetes & EMR on EKS, mounting PVCs solves 4 enterprise challenges:
+          </div>
+        </div>
+
+        <h2>4 Primary Spark PV Use Cases</h2>
+        <ol style="margin-left: 1.5rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.5rem;">
+          <li><b>Spark Shuffle Spill (<code>spark.local.dir</code>)</b>: When Spark shuffle datasets exceed executor container RAM during large joins/aggregations, Spark spills data to disk. Mounting fast NVMe/SSD PVCs (`/tmp/spark-local-dir`) prevents Executor Out-Of-Memory (OOM) crashes.</li>
+          <li><b>Spark Event Logs (<code>spark.eventLog.dir</code>)</b>: Spark Driver pods write JSON event logs to a shared PVC. The <b>Spark History Server</b> mounts the same PVC to render post-execution DAG visualizations.</li>
+          <li><b>Structured Streaming Checkpointing (<code>checkpointLocation</code>)</b>: PySpark Structured Streaming writes offset metadata and state store checkpoints to a PVC, ensuring streaming queries recover seamlessly upon driver restarts.</li>
+          <li><b>Shared Datasets & ML Artifacts</b>: Mounting pre-loaded PVCs read-only across executor pods avoids downloading multi-gigabyte reference datasets over the network.</li>
+        </ol>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Spark PV Architecture Use Cases</span>
+              <span class="task-desc">Understand how shuffle spill storage, event logs, and checkpoints utilize Kubernetes PVCs.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 5: SPARK PVC POD TEMPLATE -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Spark PVC Pod Template Manifest</h1>
+        <p class="subtitle">Examine Spark Driver Pod Template configuring volume mounts for shuffle spill and event logs.</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML — manifests/spark-pvc-pod-template.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: Pod
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: spark-driver-pvc-template
+  <span class="token-keyword">labels</span>:
+    <span class="token-keyword">app.kubernetes.io/component</span>: driver
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: spark-kubernetes-driver
+      <span class="token-keyword">env</span>:
+        - <span class="token-keyword">name</span>: SPARK_LOCAL_DIRS
+          <span class="token-keyword">value</span>: <span class="token-string">"/tmp/spark-local-dir"</span>
+        - <span class="token-keyword">name</span>: SPARK_EVENTLOG_DIR
+          <span class="token-keyword">value</span>: <span class="token-string">"file:///tmp/spark-events"</span>
+      <span class="token-keyword">volumeMounts</span>:
+        - <span class="token-keyword">name</span>: spark-shuffle-spill-volume
+          <span class="token-keyword">mountPath</span>: /tmp/spark-local-dir
+        - <span class="token-keyword">name</span>: spark-eventlog-volume
+          <span class="token-keyword">mountPath</span>: /tmp/spark-events
+  <span class="token-keyword">volumes</span>:
+    - <span class="token-keyword">name</span>: spark-shuffle-spill-volume
+      <span class="token-keyword">persistentVolumeClaim</span>:
+        <span class="token-keyword">claimName</span>: spark-shuffle-pvc
+    - <span class="token-keyword">name</span>: spark-eventlog-volume
+      <span class="token-keyword">persistentVolumeClaim</span>:
+        <span class="token-keyword">claimName</span>: spark-history-pvc</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Inspect Spark PVC Pod Template</span>
+              <span class="task-desc">Verify how SPARK_LOCAL_DIRS and SPARK_EVENTLOG_DIR bind to mounted PVC volumes.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 6: KNOWLEDGE ASSESSMENT (QUIZ) -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of PV, PVC, StorageClasses, and Spark volume integration.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. What happens to the data inside a PostgreSQL pod when the pod is deleted, if it mounts a PersistentVolumeClaim (PVC)?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Data remains 100% intact on the PVC and is re-attached to the new replacement pod</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) Data is deleted permanently</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Data is moved to CoreDNS</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) The Kubernetes cluster shuts down</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. Which Kubernetes component enables Dynamic Volume Provisioning so PersistentVolumes (PVs) are created automatically when a PVC is applied?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) StorageClass</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) ConfigMap</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Metrics Server</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Kube-Proxy</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. Why should Apache Spark workloads mount a PVC to `spark.local.dir` (/tmp/spark-local-dir)?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) To store intermediate shuffle spill data when joins/aggregations exceed executor container RAM, preventing OOM crashes</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) To store Snowflake passwords</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) To run Minikube in offline mode</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) To trigger Airflow DAGs</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Quiz</span>
+              <span class="task-desc">Answer all assessment questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 7: COMPLETION CERTIFICATE -->
+      <section class="content-panel" id="panel-7">
+        <h1>Completion Certificate</h1>
+        <p class="subtitle">Congratulations! Complete all lab tasks to generate and download your personalized certificate.</p>
+
+        <div class="cert-canvas-container">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Full Name" oninput="generateCertificate()">
+          
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Controller -->
+  <script>
+    const TOTAL_STEPS = 8;
+    let currentStep = 0;
+    const completedTasks = new Set();
+    const totalTaskCount = 7;
+
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= TOTAL_STEPS) return;
+      currentStep = stepIndex;
+
+      document.querySelectorAll('.content-panel').forEach((panel, idx) => {
+        panel.classList.toggle('active', idx === stepIndex);
+      });
+
+      document.querySelectorAll('.step-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === stepIndex);
+      });
+
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = currentStep === 0;
+
+      if (currentStep === TOTAL_STEPS - 1) {
+        btnNext.textContent = 'Completed 🎉';
+        btnNext.disabled = true;
+      } else {
+        btnNext.textContent = 'Next Step →';
+        btnNext.disabled = false;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    function switchOsTab(os) {
+      document.querySelectorAll('.os-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-os') === os);
+      });
+      document.querySelectorAll('.os-content').forEach(content => {
+        content.classList.toggle('active', content.getAttribute('data-os') === os);
+      });
+    }
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', newTheme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+      generateCertificate();
+    }
+
+    function toggleTask(elem) {
+      const taskId = elem.getAttribute('data-task-id');
+      if (!taskId) return;
+
+      if (completedTasks.has(taskId)) {
+        completedTasks.delete(taskId);
+        elem.classList.remove('completed');
+      } else {
+        completedTasks.add(taskId);
+        elem.classList.add('completed');
+      }
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const percentage = Math.round((completedTasks.size / totalTaskCount) * 100);
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').textContent = percentage + '%';
+
+      if (percentage === 100) {
+        generateCertificate();
+      }
+    }
+
+    function checkQuiz(optionElem) {
+      const parentCard = optionElem.closest('.quiz-card');
+      const isCorrect = optionElem.getAttribute('data-correct') === 'true';
+
+      parentCard.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'incorrect');
+      });
+
+      if (isCorrect) {
+        optionElem.classList.add('correct');
+      } else {
+        optionElem.classList.add('incorrect');
+      }
+    }
+
+    function copyCode(btnElem) {
+      const codeBlock = btnElem.closest('.code-block-container').querySelector('pre.code-content');
+      if (!codeBlock) return;
+
+      const textToCopy = codeBlock.innerText;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const origText = btnElem.textContent;
+        btnElem.textContent = 'Copied!';
+        setTimeout(() => {
+          btnElem.textContent = origText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy code: ', err);
+      });
+    }
+
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 85);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 24px "Outfit", sans-serif';
+      ctx.fillText('Kubernetes Persistent Volumes, PVCs & StorageClasses', canvas.width / 2, 125);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 15px "Outfit", sans-serif';
+      ctx.fillText('PostgreSQL Data Persistence & Spark Volume Integration', canvas.width / 2, 155);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '400 14px "Inter", sans-serif';
+      ctx.fillText('This is proudly presented to', canvas.width / 2, 210);
+
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = '700 32px "Outfit", sans-serif';
+      ctx.fillText(name, canvas.width / 2, 260);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '400 13px "Inter", sans-serif';
+      ctx.fillText('For mastering Kubernetes PV, PVC, StorageClasses, PostgreSQL data persistence', canvas.width / 2, 310);
+      ctx.fillText('across pod deletion, and Apache Spark shuffle spill volume integration', canvas.width / 2, 330);
+
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Date: ${today}`, 70, 420);
+
+      ctx.textAlign = 'right';
+      ctx.font = '32px "Great Vibes", cursive';
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText('Navdeep Kaur', canvas.width - 70, 415);
+      
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 12px "Inter", sans-serif';
+      ctx.fillText('Lead Data Engineering Instructor', canvas.width - 70, 435);
+    }
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      const link = document.createElement('a');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+      link.download = `K8s_PV_PVC_Postgres_Certificate_${name.replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function shareCertificate() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Kubernetes PV, PVC & PostgreSQL Persistence Certificate',
+          text: 'I completed Lab 18: Kubernetes PV, PVC, StorageClasses & PostgreSQL Data Persistence!',
+          url: window.location.href
+        }).catch(err => console.log('Share dismissed', err));
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Lab link copied to clipboard!');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      goToStep(0);
+      generateCertificate();
+    });
+  </script>
+</body>
+</html>

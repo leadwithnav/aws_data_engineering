@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 17: ConfigMap envFrom Injection & Secret Volume Mapping — Spark Snowflake Pipeline</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-indigo: #6366f1;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 140px;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: width 0.3s ease;
+    }
+
+    #progressPercent {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 36px;
+    }
+
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    /* --- LAYOUT WRAPPER --- */
+    .main-wrapper {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: var(--footer-height);
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+      font-weight: 700;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.1);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--border-color);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2rem 3rem 6rem 3rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.75rem;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.85rem 0;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      margin: 1.25rem 0;
+      border-left: 4px solid;
+    }
+
+    .callout-purple {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: var(--accent-purple);
+    }
+
+    .callout-blue {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: var(--accent-blue);
+    }
+
+    .callout-amber {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: var(--accent-amber);
+    }
+
+    .callout-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+
+    .callout-content {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- OS SWITCHER TABS --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2px;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      padding: 0.6rem 1.15rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .os-tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .os-tab-btn.active {
+      color: var(--accent-purple);
+      border-bottom-color: var(--accent-purple);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR & CODE BLOCKS --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* Syntax Highlighting Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      margin: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.completed {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.05);
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.completed .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.completed .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* --- QUIZ CARD --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quiz-question {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.85rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-purple);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.15);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.15);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    /* --- CERTIFICATE CANVAS --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn-cert {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    #certCanvas {
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* --- STICKY FOOTER NAVIGATION --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      border: none;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .footer-copyright {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">17</div>
+      <div class="brand-title">Lab 17: ConfigMap envFrom Injection & Secret Volume Mapping</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> Theme
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Minikube Image Load</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">ConfigMap & kubectl Secret</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Pod Spec (envFrom + Volume)</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">EMR on EKS Pod Templates</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">PySpark Reading /etc/secrets</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Airflow EMR EKS DAG Pipeline</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Knowledge Assessment</span>
+        </li>
+        <li class="step-item" onclick="goToStep(8)">
+          <span class="step-number">9</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- STEP 0: OVERVIEW & ARCHITECTURE -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Architecture</h1>
+        <p class="subtitle">Inject ConfigMap via <code>envFrom</code>, map Secret via <code>Volume Mount</code> (`/etc/secrets`), and access secrets in PySpark code.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Production Architecture Pattern</div>
+          <div class="callout-content">
+            ConfigMaps are injected via <b><code>envFrom</code></b> to expose non-sensitive URLs and settings as environment variables. Sensitive credentials (passwords, access keys) are mapped securely via <b><code>Volume Mounts</code></b> (`/etc/secrets`). PySpark code reads these secret files directly from disk, preventing secret leakage in process environment trees.
+          </div>
+        </div>
+
+        <h2>Module Objectives</h2>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+          <li>Master Minikube offline image loading: <code>docker pull</code> locally and <code>minikube image load</code>.</li>
+          <li>Create Secrets directly on CLI via <code>kubectl create secret generic</code> (no Secret YAML file).</li>
+          <li>Inject ConfigMap parameters into containers using <code>envFrom</code>.</li>
+          <li>Map Secrets into containers via volume mounts to <code>/etc/secrets</code>.</li>
+          <li>Author PySpark code that reads secret files directly from <code>/etc/secrets/SNOWFLAKE_PASSWORD</code>.</li>
+          <li>Orchestrate EMR on EKS Spark jobs via Airflow <code>EmrContainerOperator</code>.</li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review Lab Architecture</span>
+              <span class="task-desc">Understand envFrom for ConfigMaps and Volume Mounts (/etc/secrets) for Secret files.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 1: MINIKUBE IMAGE LOAD -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Minikube Offline Image Load Workflow</h1>
+        <p class="subtitle">Pull container images locally using Docker CLI and load them directly into your local Minikube cluster cache.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚠️ Minikube Network Restriction</div>
+          <div class="callout-content">
+            When Minikube cannot download container images directly from Docker Hub due to network proxies, pull images locally with Docker CLI and push them to Minikube using <code>minikube image load</code>.
+          </div>
+        </div>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
+minikube start --cpus 2 --memory 4096
+
+<span class="token-comment"># 2. Pull container image locally via Docker CLI</span>
+docker pull nginx:alpine
+
+<span class="token-comment"># 3. Load container image into Minikube internal docker engine</span>
+minikube image load nginx:alpine
+
+<span class="token-comment"># 4. Verify image is present in minikube image cache</span>
+minikube image ls | grep "nginx"</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Start Minikube cluster</span>
+minikube start --cpus 2 --memory 4096
+
+<span class="token-comment"># 2. Pull container image locally via Docker CLI</span>
+docker pull nginx:alpine
+
+<span class="token-comment"># 3. Load container image into Minikube internal docker engine</span>
+minikube image load nginx:alpine
+
+<span class="token-comment"># 4. Verify image is present in minikube image cache</span>
+minikube image ls | Select-String "nginx"</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Execute Minikube Image Load</span>
+              <span class="task-desc">Run docker pull nginx:alpine and load it into minikube using minikube image load nginx:alpine.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 2: CONFIGMAP & KUBECTL SECRET CREATION -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: ConfigMap & CLI Secret Creation</h1>
+        <p class="subtitle">Create ConfigMap from YAML and create Kubernetes Secret directly on CLI via `kubectl create secret`.</p>
+
+        <h2>3.1 ConfigMap Manifest (<code>manifests/configmap.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML — configmap.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: ConfigMap
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: app-config
+  <span class="token-keyword">namespace</span>: analytics-dev
+<span class="token-keyword">data</span>:
+  <span class="token-keyword">S3_BUCKET</span>: <span class="token-string">"my-data-lake-bucket"</span>
+  <span class="token-keyword">SNOWFLAKE_URL</span>: <span class="token-string">"xy12345.us-west-2.aws.snowflakecomputing.com"</span>
+  <span class="token-keyword">SNOWFLAKE_ACCOUNT</span>: <span class="token-string">"xy12345.us-west-2.aws"</span>
+  <span class="token-keyword">SNOWFLAKE_WAREHOUSE</span>: <span class="token-string">"ANALYTICS_WH"</span>
+  <span class="token-keyword">SNOWFLAKE_DATABASE</span>: <span class="token-string">"DATA_LAKE_DB"</span>
+  <span class="token-keyword">SNOWFLAKE_SCHEMA</span>: <span class="token-string">"PUBLIC"</span>
+  <span class="token-keyword">SNOWFLAKE_ROLE</span>: <span class="token-string">"DATA_ENGINEER_ROLE"</span></code></pre>
+        </div>
+
+        <h2>3.2 Create Secret via <code>kubectl create secret generic</code> (No YAML File)</h2>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Apply ConfigMap</span>
+kubectl apply -f manifests/configmap.yaml -n analytics-dev
+
+<span class="token-comment"># Create Secret directly on CLI</span>
+kubectl create secret generic app-secret \
+  --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" \
+  --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" \
+  --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -n analytics-dev</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># Apply ConfigMap</span>
+kubectl apply -f manifests/configmap.yaml -n analytics-dev
+
+<span class="token-comment"># Create Secret directly on CLI</span>
+kubectl create secret generic app-secret `
+  --from-literal=SNOWFLAKE_USER="SPARK_SNOWFLAKE_USER" `
+  --from-literal=SNOWFLAKE_PASSWORD="SuperSecretSnowflakePassword123!" `
+  --from-literal=AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" `
+  --from-literal=AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" `
+  -n analytics-dev</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Create ConfigMap & Secret via CLI</span>
+              <span class="task-desc">Apply configmap.yaml and run kubectl create secret generic app-secret on CLI.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 3: POD SPEC (ENVFROM + VOLUME MOUNT) -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Pod Spec (ConfigMap via envFrom & Secret via Volume)</h1>
+        <p class="subtitle">Inject ConfigMap via `envFrom` and map Secret via Volume Mount to `/etc/secrets`.</p>
+
+        <h2>4.1 Pod Manifest (<code>manifests/pod-with-configmap-secret.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML — pod-with-configmap-secret.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: Pod
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: demo-configmap-secret-pod
+  <span class="token-keyword">namespace</span>: analytics-dev
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: demo-container
+      <span class="token-keyword">image</span>: nginx:alpine
+      <span class="token-keyword">imagePullPolicy</span>: Never
+      <span class="token-keyword">envFrom</span>:
+        - <span class="token-keyword">configMapRef</span>:
+            <span class="token-keyword">name</span>: app-config
+      <span class="token-keyword">volumeMounts</span>:
+        - <span class="token-keyword">name</span>: secret-volume
+          <span class="token-keyword">mountPath</span>: /etc/secrets
+          <span class="token-keyword">readOnly</span>: true
+  <span class="token-keyword">volumes</span>:
+    - <span class="token-keyword">name</span>: secret-volume
+      <span class="token-keyword">secret</span>:
+        <span class="token-keyword">secretName</span>: app-secret</code></pre>
+        </div>
+
+        <h2>4.2 Verify Injection & Secret Files</h2>
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">Bash / Zsh</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply pod manifest</span>
+kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+
+<span class="token-comment"># 2. Verify ConfigMap environment variables (populated via envFrom)</span>
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | grep -E "SNOWFLAKE|S3"
+
+<span class="token-comment"># 3. Read mounted Secret files directly from /etc/secrets volume mount</span>
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header"><span class="code-lang-badge">PowerShell</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Apply pod manifest</span>
+kubectl apply -f manifests/pod-with-configmap-secret.yaml -n analytics-dev
+
+<span class="token-comment"># 2. Verify ConfigMap environment variables (populated via envFrom)</span>
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- env | Select-String "SNOWFLAKE|S3"
+
+<span class="token-comment"># 3. Read mounted Secret files directly from /etc/secrets volume mount</span>
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_USER
+kubectl exec -it demo-configmap-secret-pod -n analytics-dev -- cat /etc/secrets/SNOWFLAKE_PASSWORD</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Deploy Pod & Verify /etc/secrets Files</span>
+              <span class="task-desc">Deploy demo-configmap-secret-pod and run kubectl exec to read secret files from /etc/secrets.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 4: EMR ON EKS POD TEMPLATES -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Driver & Executor Pod Templates for EMR on EKS</h1>
+        <p class="subtitle">Configure Pod Templates to inject ConfigMap via `envFrom` and map Secret via Volume Mount.</p>
+
+        <h2>5.1 Driver Pod Template (<code>pod-templates/driver-pod-template.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">YAML — driver-pod-template.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: Pod
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: spark-driver-template
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: spark-kubernetes-driver
+      <span class="token-keyword">envFrom</span>:
+        - <span class="token-keyword">configMapRef</span>:
+            <span class="token-keyword">name</span>: app-config
+      <span class="token-keyword">volumeMounts</span>:
+        - <span class="token-keyword">name</span>: secret-volume
+          <span class="token-keyword">mountPath</span>: /etc/secrets
+          <span class="token-keyword">readOnly</span>: true
+  <span class="token-keyword">volumes</span>:
+    - <span class="token-keyword">name</span>: secret-volume
+      <span class="token-keyword">secret</span>:
+        <span class="token-keyword">secretName</span>: app-secret</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Configure EMR Spark Pod Templates</span>
+              <span class="task-desc">Verify driver and executor pod templates in pod-templates/ folder and upload to S3.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 5: PYSPARK READING /ETC/SECRETS -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: PySpark Reading Secrets from Volume Mount</h1>
+        <p class="subtitle">Inspect PySpark code reading secrets directly from mounted files at `/etc/secrets/`.</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Python — app/spark_s3_to_snowflake.py</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">import</span> os
+<span class="token-keyword">from</span> pyspark.sql <span class="token-keyword">import</span> SparkSession
+<span class="token-keyword">from</span> pyspark.sql.functions <span class="token-keyword">import</span> col, sum <span class="token-keyword">as</span> _sum
+
+<span class="token-keyword">def</span> <span class="token-function">read_secret_file</span>(secret_key):
+    secret_path = f<span class="token-string">"/etc/secrets/{secret_key}"</span>
+    <span class="token-keyword">if</span> os.path.exists(secret_path):
+        <span class="token-keyword">with</span> open(secret_path, <span class="token-string">"r"</span>) <span class="token-keyword">as</span> f:
+            <span class="token-keyword">return</span> f.read().strip()
+    <span class="token-keyword">return</span> os.environ.get(secret_key, <span class="token-string">""</span>)
+
+<span class="token-comment"># 1. Read ConfigMap variables (injected via envFrom)</span>
+s3_bucket = os.environ.get(<span class="token-string">"S3_BUCKET"</span>, <span class="token-string">"my-data-lake-bucket"</span>)
+sf_url = os.environ.get(<span class="token-string">"SNOWFLAKE_URL"</span>)
+
+<span class="token-comment"># 2. Read Secret credentials directly from /etc/secrets Volume Mount</span>
+sf_user = read_secret_file(<span class="token-string">"SNOWFLAKE_USER"</span>)
+sf_password = read_secret_file(<span class="token-string">"SNOWFLAKE_PASSWORD"</span>)
+
+spark = SparkSession.builder.appName(<span class="token-string">"EMR_EKS_S3_to_Snowflake"</span>).getOrCreate()
+
+<span class="token-comment"># Extract dataset from Amazon S3</span>
+df = spark.read.parquet(f<span class="token-string">"s3a://{s3_bucket}/data/input/sales_data.parquet"</span>)
+
+<span class="token-comment"># Write summary to Snowflake</span>
+df.write \
+   .format(<span class="token-string">"snowflake"</span>) \
+   .option(<span class="token-string">"sfURL"</span>, sf_url) \
+   .option(<span class="token-string">"sfUser"</span>, sf_user) \
+   .option(<span class="token-string">"sfPassword"</span>, sf_password) \
+   .option(<span class="token-string">"dbtable"</span>, <span class="token-string">"SALES_SUMMARY_MONTHLY"</span>) \
+   .mode(<span class="token-string">"overwrite"</span>) \
+   .save()</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Review PySpark Secret File Reader</span>
+              <span class="task-desc">Understand how read_secret_file() opens /etc/secrets/SNOWFLAKE_PASSWORD to fetch credentials.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 6: AIRFLOW EMR EKS DAG PIPELINE -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Airflow EMR EKS Snowflake DAG Pipeline</h1>
+        <p class="subtitle">Orchestrate the Spark job on EMR Virtual Cluster via Airflow `EmrContainerOperator`.</p>
+
+        <div class="code-block-container">
+          <div class="code-header"><span class="code-lang-badge">Python — dags/emr_eks_snowflake_dag.py</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+          <pre class="code-content"><code><span class="token-keyword">from</span> airflow <span class="token-keyword">import</span> DAG
+<span class="token-keyword">from</span> airflow.providers.amazon.aws.operators.emr <span class="token-keyword">import</span> EmrContainerOperator
+
+<span class="token-keyword">with</span> DAG(
+    dag_id=<span class="token-string">"emr_eks_s3_to_snowflake_pipeline_dag"</span>,
+    schedule_interval=<span class="token-keyword">None</span>,
+    catchup=<span class="token-keyword">False</span>,
+) <span class="token-keyword">as</span> dag:
+
+    submit_spark_snowflake_job = EmrContainerOperator(
+        task_id=<span class="token-string">"submit_spark_s3_to_snowflake_job"</span>,
+        name=<span class="token-string">"airflow-emr-eks-s3-snowflake-job"</span>,
+        virtual_cluster_id=<span class="token-string">"abc123def456ghi789"</span>,
+        execution_role_arn=<span class="token-string">"arn:aws:iam::123456789012:role/EMRJobExecutionRole"</span>,
+        release_label=<span class="token-string">"emr-6.10.0-latest"</span>,
+        job_driver={
+            <span class="token-string">"sparkSubmitJobDriver"</span>: {
+                <span class="token-string">"entryPoint"</span>: <span class="token-string">"local:///opt/spark/work-dir/spark_s3_to_snowflake.py"</span>,
+                <span class="token-string">"sparkSubmitParameters"</span>: (
+                    <span class="token-string">"--conf spark.kubernetes.driver.podTemplateFile=s3://my-bucket/pod-templates/driver-pod-template.yaml "</span>
+                    <span class="token-string">"--conf spark.kubernetes.executor.podTemplateFile=s3://my-bucket/pod-templates/executor-pod-template.yaml "</span>
+                    <span class="token-string">"--packages net.snowflake:spark-snowflake_2.12:2.12.0-spark_3.3"</span>
+                ),
+            }
+        },
+        aws_conn_id=<span class="token-string">"aws_default"</span>,
+        wait_for_completion=<span class="token-keyword">True</span>,
+    )</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Trigger Airflow DAG Pipeline</span>
+              <span class="task-desc">Trigger emr_eks_s3_to_snowflake_pipeline_dag from Airflow Web UI and stream driver logs.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 7: KNOWLEDGE ASSESSMENT (QUIZ) -->
+      <section class="content-panel" id="panel-7">
+        <h1>Module 8: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of ConfigMap envFrom injection, Secret volume mapping, and PySpark file reading.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. In this architecture, how does PySpark retrieve the Snowflake password securely?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) PySpark reads the mounted secret file directly from /etc/secrets/SNOWFLAKE_PASSWORD</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) The password is hardcoded inside the Dockerfile</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) PySpark connects to Docker Hub to fetch secrets</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Snowflake sends the password via CoreDNS</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. Which spec block is used to bulk-inject all ConfigMap key-value pairs as environment variables?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) envFrom: [ configMapRef: { name: app-config } ]</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) valueFrom: { secretKeyRef: { name: app-secret } }</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) volumeMounts: [ mountPath: /etc/config ]</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) configMap: { name: app-config }</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. What is the benefit of mapping Secrets as volume mounts instead of environment variables?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Secret values are stored on disk in /etc/secrets and do not leak in container environment variable dumps</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) It makes the cluster 90% cheaper</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) It automatically installs Snowflake</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) It eliminates the need for PySpark</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t7_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox"><svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Quiz</span>
+              <span class="task-desc">Answer all assessment questions to unlock your completion certificate.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 8: COMPLETION CERTIFICATE -->
+      <section class="content-panel" id="panel-8">
+        <h1>Completion Certificate</h1>
+        <p class="subtitle">Congratulations! Complete all lab tasks to generate and download your personalized certificate.</p>
+
+        <div class="cert-canvas-container">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Full Name" oninput="generateCertificate()">
+          
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Controller -->
+  <script>
+    const TOTAL_STEPS = 9;
+    let currentStep = 0;
+    const completedTasks = new Set();
+    const totalTaskCount = 8;
+
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= TOTAL_STEPS) return;
+      currentStep = stepIndex;
+
+      document.querySelectorAll('.content-panel').forEach((panel, idx) => {
+        panel.classList.toggle('active', idx === stepIndex);
+      });
+
+      document.querySelectorAll('.step-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === stepIndex);
+      });
+
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = currentStep === 0;
+
+      if (currentStep === TOTAL_STEPS - 1) {
+        btnNext.textContent = 'Completed 🎉';
+        btnNext.disabled = true;
+      } else {
+        btnNext.textContent = 'Next Step →';
+        btnNext.disabled = false;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    function switchOsTab(os) {
+      document.querySelectorAll('.os-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-os') === os);
+      });
+      document.querySelectorAll('.os-content').forEach(content => {
+        content.classList.toggle('active', content.getAttribute('data-os') === os);
+      });
+    }
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', newTheme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+      generateCertificate();
+    }
+
+    function toggleTask(elem) {
+      const taskId = elem.getAttribute('data-task-id');
+      if (!taskId) return;
+
+      if (completedTasks.has(taskId)) {
+        completedTasks.delete(taskId);
+        elem.classList.remove('completed');
+      } else {
+        completedTasks.add(taskId);
+        elem.classList.add('completed');
+      }
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const percentage = Math.round((completedTasks.size / totalTaskCount) * 100);
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').textContent = percentage + '%';
+
+      if (percentage === 100) {
+        generateCertificate();
+      }
+    }
+
+    function checkQuiz(optionElem) {
+      const parentCard = optionElem.closest('.quiz-card');
+      const isCorrect = optionElem.getAttribute('data-correct') === 'true';
+
+      parentCard.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'incorrect');
+      });
+
+      if (isCorrect) {
+        optionElem.classList.add('correct');
+      } else {
+        optionElem.classList.add('incorrect');
+      }
+    }
+
+    function copyCode(btnElem) {
+      const codeBlock = btnElem.closest('.code-block-container').querySelector('pre.code-content');
+      if (!codeBlock) return;
+
+      const textToCopy = codeBlock.innerText;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const origText = btnElem.textContent;
+        btnElem.textContent = 'Copied!';
+        setTimeout(() => {
+          btnElem.textContent = origText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy code: ', err);
+      });
+    }
+
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 85);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 24px "Outfit", sans-serif';
+      ctx.fillText('ConfigMap envFrom & Secret Volume Mapping in Kubernetes', canvas.width / 2, 125);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 15px "Outfit", sans-serif';
+      ctx.fillText('PySpark S3 to Snowflake Airflow Data Pipeline', canvas.width / 2, 155);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '400 14px "Inter", sans-serif';
+      ctx.fillText('This is proudly presented to', canvas.width / 2, 210);
+
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = '700 32px "Outfit", sans-serif';
+      ctx.fillText(name, canvas.width / 2, 260);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '400 13px "Inter", sans-serif';
+      ctx.fillText('For mastering ConfigMap envFrom injection, Secret volume mapping (/etc/secrets),', canvas.width / 2, 310);
+      ctx.fillText('and PySpark S3 to Snowflake pipeline orchestration on EMR on EKS via Airflow', canvas.width / 2, 330);
+
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Date: ${today}`, 70, 420);
+
+      ctx.textAlign = 'right';
+      ctx.font = '32px "Great Vibes", cursive';
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText('Navdeep Kaur', canvas.width - 70, 415);
+      
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 12px "Inter", sans-serif';
+      ctx.fillText('Lead Data Engineering Instructor', canvas.width - 70, 435);
+    }
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      const link = document.createElement('a');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+      link.download = `ConfigMap_envFrom_Secret_Volume_Certificate_${name.replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function shareCertificate() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'ConfigMap envFrom & Secret Volume Mapping Certificate',
+          text: 'I completed Lab 17: ConfigMap envFrom Injection & Secret Volume Mapping in PySpark Snowflake Pipeline!',
+          url: window.location.href
+        }).catch(err => console.log('Share dismissed', err));
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Lab link copied to clipboard!');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      goToStep(0);
+      generateCertificate();
+    });
+  </script>
+</body>
+</html>

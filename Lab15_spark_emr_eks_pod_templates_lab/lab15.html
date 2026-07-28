@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 15: Airflow Orchestration for Spark on EKS via EMR — Configs & Pod Templates</title>
+  
+  <!-- Google Fonts: Inter / Outfit for UI, JetBrains Mono for Code, Great Vibes for Signature -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       CSS DESIGN TOKENS & SYSTEM SPECIFICATION (lab_structure.md)
+       ========================================================================== */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-purple: #7c3aed;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --accent-indigo: #4f46e5;
+      --border-color: #e2e8f0;
+      --code-bg: #1e1e1e;
+      --sidebar-width: 320px;
+      --header-height: 70px;
+      --footer-height: 70px;
+      --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #8b5cf6;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-indigo: #6366f1;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.75rem;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .progress-bar-container {
+      width: 140px;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+      transition: width 0.3s ease;
+    }
+
+    #progressPercent {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 36px;
+    }
+
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    /* --- LAYOUT WRAPPER --- */
+    .main-wrapper {
+      display: flex;
+      margin-top: var(--header-height);
+      min-height: calc(100vh - var(--header-height));
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      padding: 1.5rem 1rem;
+      position: fixed;
+      top: var(--header-height);
+      bottom: var(--footer-height);
+      left: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 0.5rem;
+      font-weight: 700;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .step-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .step-item.active {
+      background-color: rgba(124, 58, 237, 0.1);
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--border-color);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-item.active .step-number {
+      background-color: var(--accent-purple);
+      color: #ffffff;
+    }
+
+    /* --- CONTENT AREA --- */
+    .content-area {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 2rem 3rem 6rem 3rem;
+      max-width: 1050px;
+    }
+
+    .content-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .content-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.75rem;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.85rem 0;
+      color: var(--text-primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* --- CALLOUT BANNERS --- */
+    .callout {
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      margin: 1.25rem 0;
+      border-left: 4px solid;
+    }
+
+    .callout-purple {
+      background-color: rgba(124, 58, 237, 0.08);
+      border-color: var(--accent-purple);
+    }
+
+    .callout-blue {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: var(--accent-blue);
+    }
+
+    .callout-amber {
+      background-color: rgba(245, 158, 11, 0.08);
+      border-color: var(--accent-amber);
+    }
+
+    .callout-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-purple .callout-title { color: var(--accent-purple); }
+    .callout-blue .callout-title { color: var(--accent-blue); }
+    .callout-amber .callout-title { color: var(--accent-amber); }
+
+    .callout-content {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* --- OS SWITCHER TABS --- */
+    .os-tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 2px;
+    }
+
+    .os-tab-btn {
+      background: none;
+      border: none;
+      padding: 0.6rem 1.15rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .os-tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .os-tab-btn.active {
+      color: var(--accent-purple);
+      border-bottom-color: var(--accent-purple);
+    }
+
+    .os-content {
+      display: none;
+    }
+
+    .os-content.active {
+      display: block;
+    }
+
+    /* --- VS CODE EDITOR & CODE BLOCKS --- */
+    .code-block-container {
+      background-color: #1e1e1e;
+      border: 1px solid #333333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    .code-lang-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #9cdcfe;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background-color: #333333;
+      border: 1px solid #454545;
+      color: #cccccc;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.725rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: var(--transition-smooth);
+    }
+
+    .copy-btn:hover {
+      background-color: #0e639c;
+      border-color: #1177bb;
+      color: #ffffff;
+    }
+
+    pre.code-content {
+      padding: 1.15rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      background-color: #1e1e1e;
+    }
+
+    /* Syntax Highlighting Tokens */
+    .token-keyword   { color: #569cd6; font-weight: 600; }
+    .token-control   { color: #c586c0; font-weight: 600; }
+    .token-string    { color: #ce9178; }
+    .token-function  { color: #dcdcaa; }
+    .token-type      { color: #4ec9b0; }
+    .token-variable  { color: #9cdcfe; }
+    .token-number    { color: #b5cea8; }
+    .token-comment   { color: #6a9955; font-style: italic; }
+
+    /* --- TASK CHECKLIST --- */
+    .task-checklist {
+      list-style: none;
+      margin: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .task-checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container:hover {
+      border-color: var(--accent-purple);
+      background-color: var(--bg-card-hover);
+    }
+
+    .task-checkbox-container.completed {
+      border-color: var(--accent-green);
+      background-color: rgba(5, 150, 105, 0.05);
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .task-checkbox-container.completed .custom-checkbox {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+
+    .check-mark {
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+      display: none;
+    }
+
+    .task-checkbox-container.completed .check-mark {
+      display: block;
+    }
+
+    .task-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .task-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .task-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* --- QUIZ CARD --- */
+    .quiz-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quiz-question {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .quiz-option {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.85rem 1.15rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: var(--transition-smooth);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--accent-purple);
+      color: var(--text-primary);
+    }
+
+    .quiz-option.correct {
+      background-color: rgba(5, 150, 105, 0.15);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .quiz-option.incorrect {
+      background-color: rgba(220, 38, 38, 0.15);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    /* --- CERTIFICATE CANVAS --- */
+    .cert-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .cert-input {
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .cert-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn-cert {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-share {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-share:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    #certCanvas {
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* --- STICKY FOOTER NAVIGATION --- */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);
+      right: 0;
+      height: var(--footer-height);
+      background-color: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+    }
+
+    .btn-nav {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-next {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      color: #ffffff;
+      border: none;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .footer-copyright {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">15</div>
+      <div class="brand-title">Lab 15: Airflow Orchestration for Spark on EKS via EMR</div>
+    </div>
+    <div class="nav-actions">
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <span id="progressPercent">0%</span>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span> Theme
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Wrapper Grid -->
+  <div class="main-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-heading">Lab Modules</div>
+      <ul class="step-list" id="stepsList">
+        <li class="step-item active" onclick="goToStep(0)">
+          <span class="step-number">1</span>
+          <span class="step-title">Overview & Architecture</span>
+        </li>
+        <li class="step-item" onclick="goToStep(1)">
+          <span class="step-number">2</span>
+          <span class="step-title">Local Airflow via Docker</span>
+        </li>
+        <li class="step-item" onclick="goToStep(2)">
+          <span class="step-number">3</span>
+          <span class="step-title">Driver & Executor Pod Templates</span>
+        </li>
+        <li class="step-item" onclick="goToStep(3)">
+          <span class="step-number">4</span>
+          <span class="step-title">Packaging & Image Build</span>
+        </li>
+        <li class="step-item" onclick="goToStep(4)">
+          <span class="step-number">5</span>
+          <span class="step-title">Airflow EmrContainerOperator DAG</span>
+        </li>
+        <li class="step-item" onclick="goToStep(5)">
+          <span class="step-number">6</span>
+          <span class="step-title">Triggering DAG & Pod Inspection</span>
+        </li>
+        <li class="step-item" onclick="goToStep(6)">
+          <span class="step-number">7</span>
+          <span class="step-title">Knowledge Assessment</span>
+        </li>
+        <li class="step-item" onclick="goToStep(7)">
+          <span class="step-number">8</span>
+          <span class="step-title">Completion Certificate</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- STEP 0: OVERVIEW & ARCHITECTURE -->
+      <section class="content-panel active" id="panel-0">
+        <h1>Module 1: Overview & Architecture</h1>
+        <p class="subtitle">Orchestrate production Spark workloads on Amazon EMR on EKS using Apache Airflow & Pod Templates.</p>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">💡 Production Orchestration Pattern</div>
+          <div class="callout-content">
+            In modern data engineering architectures, Spark applications on EMR on EKS are submitted programmatically by Apache Airflow using the <code>EmrContainerOperator</code>. Airflow handles DAG scheduling, SLA tracking, retries, parameter passing, and pod template configuration.
+          </div>
+        </div>
+
+        <h2>Architectural Workflow</h2>
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">Architecture Flow</span>
+          </div>
+          <pre class="code-content"><code>[ Local Docker Compose (Airflow) ] ──> [ EmrContainerOperator ] ──> [ AWS EMR Containers API ]
+                                                                               │
+[ Pod Templates in S3 / Image ] ───────────────────────────────────────────────┼──> [ EKS Cluster ]
+                                                                               │      ├── Spark Driver Pod
+[ Custom PySpark Image in ECR ] ───────────────────────────────────────────────┘      └── Spark Executor Pods</code></pre>
+        </div>
+
+        <h2>Module Objectives</h2>
+        <ul style="margin-left: 1.5rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+          <li>Spin up a local multi-container Apache Airflow stack using <code>docker-compose.yaml</code>.</li>
+          <li>Configure AWS credentials and <code>aws_default</code> connection inside Airflow.</li>
+          <li>Author an Airflow DAG using <code>EmrContainerOperator</code> to trigger EMR on EKS job runs.</li>
+          <li>Pass Spark Configuration Parameters and Driver/Executor Pod Templates dynamically.</li>
+          <li>Trigger the DAG and inspect running Driver and Executor pods in Amazon EKS.</li>
+        </ul>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t0_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Review Airflow + EMR on EKS Architecture</span>
+              <span class="task-desc">Understand how Apache Airflow orchestrates EMR Virtual Cluster job runs on Kubernetes.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 1: LOCAL AIRFLOW VIA DOCKER -->
+      <section class="content-panel" id="panel-1">
+        <h1>Module 2: Local Airflow & CLI Credentials Setup</h1>
+        <p class="subtitle">Launch a local Apache Airflow stack using Docker Compose and supply AWS credentials via CLI without storing secrets in <code>.env</code>.</p>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">🔐 Security Best Practice</div>
+          <div class="callout-content">
+            AWS Access Key ID and Secret Access Key should <b>NEVER</b> be hardcoded or saved inside <code>.env</code> files. Choose one of the secure CLI methods below to supply credentials dynamically.
+          </div>
+        </div>
+
+        <h2>2.1 Supply AWS Credentials via CLI (3 Options)</h2>
+
+        <h3>Option A: Mount Host AWS CLI Credentials (<code>~/.aws</code>)</h3>
+        <p>If you have already run <code>aws configure</code> on your machine, Airflow automatically reads your host AWS credentials via Docker volume mount (<code>~/.aws:/home/airflow/.aws:ro</code>).</p>
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">Host CLI</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre class="code-content"><code># Verify host credentials & launch Airflow
+aws sts get-caller-identity
+docker compose up -d --build</code></pre>
+        </div>
+
+        <h3>Option B: Pass Environment Variables on Terminal CLI</h3>
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS (Terminal)</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">Bash / Zsh</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code>export AWS_ACCESS_KEY_ID="YOUR_ACCESS_KEY_ID"
+export AWS_SECRET_ACCESS_KEY="YOUR_SECRET_ACCESS_KEY"
+export AWS_DEFAULT_REGION="us-west-2"
+
+docker compose up -d --build</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">PowerShell</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code>$env:AWS_ACCESS_KEY_ID = "YOUR_ACCESS_KEY_ID"
+$env:AWS_SECRET_ACCESS_KEY = "YOUR_SECRET_ACCESS_KEY"
+$env:AWS_DEFAULT_REGION = "us-west-2"
+
+docker compose up -d --build</code></pre>
+          </div>
+        </div>
+
+        <h3>Option C: Configure Airflow Connection via Airflow CLI</h3>
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">Airflow Container CLI</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre class="code-content"><code>docker compose exec airflow-webserver airflow connections add 'aws_default' \
+  --conn-type 'aws' \
+  --conn-login 'YOUR_ACCESS_KEY_ID' \
+  --conn-password 'YOUR_SECRET_ACCESS_KEY' \
+  --conn-extra '{"region_name": "us-west-2"}'</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t1_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Pass AWS Credentials via CLI & Start Airflow</span>
+              <span class="task-desc">Supply AWS credentials via host ~/.aws mount or CLI environment variables, then run docker compose up -d.</span>
+            </div>
+          </li>
+          <li class="task-checkbox-container" data-task-id="t1_2" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Access Airflow Web UI & Verify Connection</span>
+              <span class="task-desc">Navigate to http://localhost:8080 (admin / admin) and confirm active AWS connection.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 2: DRIVER & EXECUTOR POD TEMPLATES -->
+      <section class="content-panel" id="panel-2">
+        <h1>Module 3: Driver & Executor Pod Templates</h1>
+        <p class="subtitle">Author Kubernetes Pod Template YAML files for driver and executor pod customizations.</p>
+
+        <h2>3.1 Driver Pod Template (<code>pod-templates/driver-pod-template.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">YAML — driver-pod-template.yaml</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: Pod
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: spark-driver-template
+  <span class="token-keyword">labels</span>:
+    <span class="token-string">app.kubernetes.io/component</span>: driver
+    <span class="token-string">tier</span>: analytics-driver
+  <span class="token-keyword">annotations</span>:
+    <span class="token-string">prometheus.io/scrape</span>: <span class="token-string">"true"</span>
+    <span class="token-string">prometheus.io/port</span>: <span class="token-string">"4040"</span>
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: spark-kubernetes-driver
+      <span class="token-keyword">env</span>:
+        - <span class="token-keyword">name</span>: ENVIRONMENT
+          <span class="token-keyword">value</span>: <span class="token-string">"production"</span>
+      <span class="token-keyword">volumeMounts</span>:
+        - <span class="token-keyword">name</span>: driver-spark-local-dir
+          <span class="token-keyword">mountPath</span>: /data/spark-scratch
+  <span class="token-keyword">volumes</span>:
+    - <span class="token-keyword">name</span>: driver-spark-local-dir
+      <span class="token-keyword">emptyDir</span>:
+        <span class="token-keyword">medium</span>: Memory
+        <span class="token-keyword">sizeLimit</span>: 1Gi</code></pre>
+        </div>
+
+        <h2>3.2 Executor Pod Template (<code>pod-templates/executor-pod-template.yaml</code>)</h2>
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">YAML — executor-pod-template.yaml</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre class="code-content"><code><span class="token-keyword">apiVersion</span>: v1
+<span class="token-keyword">kind</span>: Pod
+<span class="token-keyword">metadata</span>:
+  <span class="token-keyword">name</span>: spark-executor-template
+  <span class="token-keyword">labels</span>:
+    <span class="token-string">app.kubernetes.io/component</span>: executor
+    <span class="token-string">tier</span>: analytics-executor
+<span class="token-keyword">spec</span>:
+  <span class="token-keyword">containers</span>:
+    - <span class="token-keyword">name</span>: spark-kubernetes-executor
+      <span class="token-keyword">env</span>:
+        - <span class="token-keyword">name</span>: SPARK_JAVA_OPT_G1GC
+          <span class="token-keyword">value</span>: <span class="token-string">"-XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=35"</span>
+      <span class="token-keyword">volumeMounts</span>:
+        - <span class="token-keyword">name</span>: executor-spark-local-dir
+          <span class="token-keyword">mountPath</span>: /data/spark-scratch
+  <span class="token-keyword">volumes</span>:
+    - <span class="token-keyword">name</span>: executor-spark-local-dir
+      <span class="token-keyword">emptyDir</span>: {}</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t2_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Create Pod Template YAML Manifests</span>
+              <span class="task-desc">Verify driver-pod-template.yaml and executor-pod-template.yaml in pod-templates/ folder.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 3: PACKAGING & IMAGE BUILD -->
+      <section class="content-panel" id="panel-3">
+        <h1>Module 4: Packaging & Image Build</h1>
+        <p class="subtitle">Upload pod templates to S3 and push your custom PySpark image to Amazon ECR.</p>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">Bash / Zsh</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Upload Pod Templates to S3</span>
+aws s3 cp pod-templates/driver-pod-template.yaml s3://<span class="token-variable">${S3_BUCKET}</span>/pod-templates/driver-pod-template.yaml
+aws s3 cp pod-templates/executor-pod-template.yaml s3://<span class="token-variable">${S3_BUCKET}</span>/pod-templates/executor-pod-template.yaml
+
+<span class="token-comment"># 2. Build & Push Custom EMR Docker Image</span>
+cd app
+docker build --platform linux/amd64 -t spark-emr-pod-templates:latest .
+
+RegistryUrl=$(echo $ECR_REPO_URL | cut -d'/' -f1)
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $RegistryUrl
+docker tag spark-emr-pod-templates:latest <span class="token-string">"$ECR_REPO_URL:v1"</span>
+docker push <span class="token-string">"$ECR_REPO_URL:v1"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">PowerShell</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code><span class="token-comment"># 1. Upload Pod Templates to S3</span>
+aws s3 cp pod-templates/driver-pod-template.yaml <span class="token-string">"s3://$env:S3_BUCKET/pod-templates/driver-pod-template.yaml"</span>
+aws s3 cp pod-templates/executor-pod-template.yaml <span class="token-string">"s3://$env:S3_BUCKET/pod-templates/executor-pod-template.yaml"</span>
+
+<span class="token-comment"># 2. Build & Push Custom EMR Docker Image</span>
+cd app
+docker build --platform linux/amd64 -t spark-emr-pod-templates:latest .
+
+$RegistryUrl = $env:ECR_REPO_URL.Split("/")[0]
+aws ecr get-login-password --region $env:AWS_REGION | docker login --username AWS --password-stdin $RegistryUrl
+docker tag spark-emr-pod-templates:latest <span class="token-string">"$env:ECR_REPO_URL:v1"</span>
+docker push <span class="token-string">"$env:ECR_REPO_URL:v1"</span></code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t3_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Upload Templates to S3 & Push Container to ECR</span>
+              <span class="task-desc">Upload YAML files to S3 bucket and push tagged v1 container image to Amazon ECR.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 4: AIRFLOW EmrContainerOperator DAG -->
+      <section class="content-panel" id="panel-4">
+        <h1>Module 5: Airflow EmrContainerOperator DAG</h1>
+        <p class="subtitle">Inspect and author the Python DAG orchestrating EMR on EKS job submission.</p>
+
+        <div class="code-block-container">
+          <div class="code-header">
+            <span class="code-lang-badge">Python — dags/emr_eks_spark_dag.py</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre class="code-content"><code><span class="token-keyword">import</span> os
+<span class="token-keyword">from</span> datetime <span class="token-keyword">import</span> datetime, timedelta
+<span class="token-keyword">from</span> airflow <span class="token-keyword">import</span> DAG
+<span class="token-keyword">from</span> airflow.providers.amazon.aws.operators.emr <span class="token-keyword">import</span> EmrContainerOperator
+
+default_args = {
+    <span class="token-string">"owner"</span>: <span class="token-string">"data_engineering_team"</span>,
+    <span class="token-string">"start_date"</span>: datetime(2026, 7, 28),
+    <span class="token-string">"retries"</span>: 1,
+}
+
+<span class="token-keyword">with</span> DAG(
+    dag_id=<span class="token-string">"emr_eks_spark_pod_templates_dag"</span>,
+    default_args=default_args,
+    schedule_interval=<span class="token-keyword">None</span>,
+    catchup=<span class="token-keyword">False</span>,
+) <span class="token-keyword">as</span> dag:
+
+    submit_emr_eks_spark_job = EmrContainerOperator(
+        task_id=<span class="token-string">"submit_spark_job_to_emr_eks"</span>,
+        name=<span class="token-string">"airflow-emr-eks-spark-pod-templates-job"</span>,
+        virtual_cluster_id=os.environ.get(<span class="token-string">"VIRTUAL_CLUSTER_ID"</span>, <span class="token-string">"abc123def456ghi789"</span>),
+        execution_role_arn=os.environ.get(<span class="token-string">"EXECUTION_ROLE_ARN"</span>, <span class="token-string">"arn:aws:iam::123456789012:role/EMRJobExecutionRole"</span>),
+        release_label=<span class="token-string">"emr-6.10.0-latest"</span>,
+        job_driver={
+            <span class="token-string">"sparkSubmitJobDriver"</span>: {
+                <span class="token-string">"entryPoint"</span>: <span class="token-string">"local:///opt/spark/work-dir/spark_app.py"</span>,
+                <span class="token-string">"sparkSubmitParameters"</span>: (
+                    <span class="token-string">"--conf spark.kubernetes.container.image="</span> + os.environ.get(<span class="token-string">"ECR_REPO_URL"</span>) + <span class="token-string">":v1 "</span>
+                    <span class="token-string">"--conf spark.kubernetes.driver.podTemplateFile=s3://"</span> + os.environ.get(<span class="token-string">"S3_BUCKET"</span>) + <span class="token-string">"/pod-templates/driver-pod-template.yaml "</span>
+                    <span class="token-string">"--conf spark.kubernetes.executor.podTemplateFile=s3://"</span> + os.environ.get(<span class="token-string">"S3_BUCKET"</span>) + <span class="token-string">"/pod-templates/executor-pod-template.yaml "</span>
+                    <span class="token-string">"--conf spark.driver.memory=1024m "</span>
+                    <span class="token-string">"--conf spark.executor.memory=1024m "</span>
+                    <span class="token-string">"--conf spark.executor.instances=2 "</span>
+                    <span class="token-string">"--conf spark.sql.adaptive.enabled=true"</span>
+                ),
+            }
+        },
+        aws_conn_id=<span class="token-string">"aws_default"</span>,
+        wait_for_completion=<span class="token-keyword">True</span>,
+    )</code></pre>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t4_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Deploy Airflow DAG File</span>
+              <span class="task-desc">Verify emr_eks_spark_dag.py is present in the dags/ directory and loaded by Airflow scheduler.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 5: TRIGGERING DAG & POD INSPECTION -->
+      <section class="content-panel" id="panel-5">
+        <h1>Module 6: Triggering DAG & Pod Inspection</h1>
+        <p class="subtitle">Trigger the DAG from Airflow Web UI and inspect running Driver and Executor pods in EKS.</p>
+
+        <div class="os-tab-bar">
+          <button class="os-tab-btn active" data-os="linux" onclick="switchOsTab('linux')">🐧 Linux / macOS</button>
+          <button class="os-tab-btn" data-os="powershell" onclick="switchOsTab('powershell')">⚡ Windows (PowerShell)</button>
+        </div>
+
+        <div class="os-content active" data-os="linux">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">Bash / Zsh</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code><span class="token-comment"># Option A: Trigger DAG via Airflow CLI inside docker</span>
+docker compose exec airflow-scheduler airflow dags trigger emr_eks_spark_pod_templates_dag
+
+<span class="token-comment"># Option B: Connect kubectl to EKS and inspect pods</span>
+aws eks update-kubeconfig --name spark-eks-cluster --region us-west-2
+
+<span class="token-comment"># List running Spark pods</span>
+kubectl get pods -n spark-emr -l app.kubernetes.io/name=spark-job
+
+<span class="token-comment"># Inspect merged driver pod specification</span>
+kubectl get pod -n spark-emr -l app.kubernetes.io/component=driver -o yaml
+
+<span class="token-comment"># Stream logs from driver pod</span>
+kubectl logs -n spark-emr -l app.kubernetes.io/component=driver -f</code></pre>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="powershell">
+          <div class="code-block-container">
+            <div class="code-header">
+              <span class="code-lang-badge">PowerShell</span>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre class="code-content"><code><span class="token-comment"># Option A: Trigger DAG via Airflow CLI inside docker</span>
+docker compose exec airflow-scheduler airflow dags trigger emr_eks_spark_pod_templates_dag
+
+<span class="token-comment"># Option B: Connect kubectl to EKS and inspect pods</span>
+aws eks update-kubeconfig --name spark-eks-cluster --region us-west-2
+
+<span class="token-comment"># List running Spark pods</span>
+kubectl get pods -n spark-emr -l app.kubernetes.io/name=spark-job
+
+<span class="token-comment"># Inspect merged driver pod specification</span>
+kubectl get pod -n spark-emr -l app.kubernetes.io/component=driver -o yaml
+
+<span class="token-comment"># Stream logs from driver pod</span>
+kubectl logs -n spark-emr -l app.kubernetes.io/component=driver -f</code></pre>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t5_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Trigger Airflow DAG & Verify EKS Pods</span>
+              <span class="task-desc">Trigger DAG from Airflow Web UI, verify task success, and stream driver logs via kubectl.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 6: KNOWLEDGE ASSESSMENT (QUIZ) -->
+      <section class="content-panel" id="panel-6">
+        <h1>Module 7: Knowledge Assessment</h1>
+        <p class="subtitle">Test your understanding of Airflow orchestration for EMR on EKS Spark jobs.</p>
+
+        <div class="quiz-card">
+          <div class="quiz-question">1. Which Airflow operator from `apache-airflow-providers-amazon` is specifically used to trigger Spark jobs on EMR Virtual Clusters on EKS?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) EmrContainerOperator</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) SparkSubmitOperator</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) EmrAddStepsOperator</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) KubernetesPodOperator</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">2. When using `EmrContainerOperator`, how do you configure Airflow to wait until the Spark job on EKS finishes before moving to the next task?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Set wait_for_completion=True in the EmrContainerOperator task parameters</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) Use time.sleep(300) inside the DAG definition</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Airflow automatically pauses all tasks for 1 hour</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Set async_mode=False on the EKS cluster</div>
+          </div>
+        </div>
+
+        <div class="quiz-card">
+          <div class="quiz-question">3. How are Spark Driver and Executor Pod Templates passed when submitting jobs via Airflow's `EmrContainerOperator`?</div>
+          <div class="quiz-options">
+            <div class="quiz-option" data-correct="true" onclick="checkQuiz(this)">A) Via --conf spark.kubernetes.driver.podTemplateFile and spark.kubernetes.executor.podTemplateFile in sparkSubmitParameters</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">B) By copying YAML files into the PostgreSQL database</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">C) Inside the Airflow webserver.service configuration file</div>
+            <div class="quiz-option" data-correct="false" onclick="checkQuiz(this)">D) Pod templates cannot be passed through Airflow</div>
+          </div>
+        </div>
+
+        <ul class="task-checklist">
+          <li class="task-checkbox-container" data-task-id="t6_1" onclick="toggleTask(this)">
+            <div class="custom-checkbox">
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div class="task-content">
+              <span class="task-label">Complete Knowledge Quiz</span>
+              <span class="task-desc">Answer all assessment questions to validate your learning.</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- STEP 7: COMPLETION CERTIFICATE -->
+      <section class="content-panel" id="panel-7">
+        <h1>Completion Certificate</h1>
+        <p class="subtitle">Congratulations! Complete all lab tasks to generate and download your personalized certificate.</p>
+
+        <div class="cert-canvas-container">
+          <input type="text" id="studentNameInput" class="cert-input" placeholder="Enter Your Full Name" oninput="generateCertificate()">
+          
+          <div class="cert-actions">
+            <button class="btn-cert btn-download" onclick="downloadCertificate()">📥 Download Certificate</button>
+            <button class="btn-cert btn-share" id="btnShareCert" onclick="shareCertificate()">🔗 Share Certificate</button>
+          </div>
+
+          <canvas id="certCanvas" width="800" height="500"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Bottom Navigation Footer -->
+    <footer class="nav-bar">
+      <button class="btn-nav btn-prev" id="btnPrev" onclick="changeStep(-1)">← Previous</button>
+      <span class="footer-copyright">© 2026 Navdeep Kaur · Unauthorized commercial use prohibited. All rights reserved.</span>
+      <button class="btn-nav btn-next" id="btnNext" onclick="changeStep(1)">Next Step →</button>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Controller -->
+  <script>
+    const TOTAL_STEPS = 8;
+    let currentStep = 0;
+    const completedTasks = new Set();
+    const totalTaskCount = 8;
+
+    function goToStep(stepIndex) {
+      if (stepIndex < 0 || stepIndex >= TOTAL_STEPS) return;
+      currentStep = stepIndex;
+
+      document.querySelectorAll('.content-panel').forEach((panel, idx) => {
+        panel.classList.toggle('active', idx === stepIndex);
+      });
+
+      document.querySelectorAll('.step-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === stepIndex);
+      });
+
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
+      btnPrev.disabled = currentStep === 0;
+
+      if (currentStep === TOTAL_STEPS - 1) {
+        btnNext.textContent = 'Completed 🎉';
+        btnNext.disabled = true;
+      } else {
+        btnNext.textContent = 'Next Step →';
+        btnNext.disabled = false;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeStep(delta) {
+      goToStep(currentStep + delta);
+    }
+
+    function switchOsTab(os) {
+      document.querySelectorAll('.os-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-os') === os);
+      });
+      document.querySelectorAll('.os-content').forEach(content => {
+        content.classList.toggle('active', content.getAttribute('data-os') === os);
+      });
+    }
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', newTheme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+
+      generateCertificate();
+    }
+
+    function toggleTask(elem) {
+      const taskId = elem.getAttribute('data-task-id');
+      if (!taskId) return;
+
+      if (completedTasks.has(taskId)) {
+        completedTasks.delete(taskId);
+        elem.classList.remove('completed');
+      } else {
+        completedTasks.add(taskId);
+        elem.classList.add('completed');
+      }
+
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const percentage = Math.round((completedTasks.size / totalTaskCount) * 100);
+      document.getElementById('progressBar').style.width = percentage + '%';
+      document.getElementById('progressPercent').textContent = percentage + '%';
+
+      if (percentage === 100) {
+        generateCertificate();
+      }
+    }
+
+    function checkQuiz(optionElem) {
+      const parentCard = optionElem.closest('.quiz-card');
+      const isCorrect = optionElem.getAttribute('data-correct') === 'true';
+
+      parentCard.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'incorrect');
+      });
+
+      if (isCorrect) {
+        optionElem.classList.add('correct');
+      } else {
+        optionElem.classList.add('incorrect');
+      }
+    }
+
+    function copyCode(btnElem) {
+      const codeBlock = btnElem.closest('.code-block-container').querySelector('pre.code-content');
+      if (!codeBlock) return;
+
+      const textToCopy = codeBlock.innerText;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const origText = btnElem.textContent;
+        btnElem.textContent = 'Copied!';
+        setTimeout(() => {
+          btnElem.textContent = origText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy code: ', err);
+      });
+    }
+
+    function generateCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 85);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '800 24px "Outfit", sans-serif';
+      ctx.fillText('Airflow Orchestration for Spark on EKS via EMR', canvas.width / 2, 125);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 15px "Outfit", sans-serif';
+      ctx.fillText('EmrContainerOperator & Driver/Executor Pod Templates', canvas.width / 2, 155);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '400 14px "Inter", sans-serif';
+      ctx.fillText('This is proudly presented to', canvas.width / 2, 210);
+
+      ctx.fillStyle = '#8b5cf6';
+      ctx.font = '700 32px "Outfit", sans-serif';
+      ctx.fillText(name, canvas.width / 2, 260);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '400 13px "Inter", sans-serif';
+      ctx.fillText('For mastering Apache Airflow local Docker setup, EmrContainerOperator DAG authoring,', canvas.width / 2, 310);
+      ctx.fillText('and Kubernetes Pod Template parameter injection on EMR on EKS', canvas.width / 2, 330);
+
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '500 13px "Inter", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Date: ${today}`, 70, 420);
+
+      ctx.textAlign = 'right';
+      ctx.font = '32px "Great Vibes", cursive';
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText('Navdeep Kaur', canvas.width - 70, 415);
+      
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 12px "Inter", sans-serif';
+      ctx.fillText('Lead Data Engineering Instructor', canvas.width - 70, 435);
+    }
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      const link = document.createElement('a');
+      const name = document.getElementById('studentNameInput').value.trim() || 'Learner';
+      link.download = `Airflow_Spark_EMR_EKS_Certificate_${name.replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function shareCertificate() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Airflow Orchestration for Spark on EKS via EMR Certificate',
+          text: 'I completed Lab 15: Airflow Orchestration for Spark on EKS via EMR — Configs & Pod Templates!',
+          url: window.location.href
+        }).catch(err => console.log('Share dismissed', err));
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Lab link copied to clipboard!');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      goToStep(0);
+      generateCertificate();
+    });
+  </script>
+</body>
+</html>
